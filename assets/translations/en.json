@@ -769,7 +769,9 @@
   "dock": {
     "actions": {
       "close": "Close",
-      "close-all": "Close All"
+      "close-all": "Close All",
+      "move-to-desktop": "Move to desktop {name}",
+      "move-to-output": "Move to {name}"
     },
     "launcher": "Launcher"
   },

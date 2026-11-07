@@ -3125,6 +3125,48 @@ void TaskbarWidget::openTaskContextMenu(const TaskModel& task, InputArea& area, 
     minimizeActions.emplace(minimizeId, MinimizeMenuAction{.window = window, .minimized = state->minimized});
     --minimizeId;
   }
+  // KDE: send the window to another virtual desktop or monitor.
+  std::unordered_map<std::int32_t, int> moveDesktopActions;
+  std::unordered_map<std::int32_t, std::string> moveOutputActions;
+  if (kde && !m_contextMenuInfoPrimary.identifier.empty()) {
+    const auto desktops = m_platform.workspaces();
+    std::int32_t moveId = 1000;
+    if (desktops.size() > 1) {
+      if (!entries.empty()) {
+        entries.push_back(
+            ContextMenuControlEntry{.id = -5, .label = {}, .enabled = false, .separator = true, .hasSubmenu = false}
+        );
+      }
+      for (const auto& desktop : desktops) {
+        entries.push_back(ContextMenuControlEntry{
+            .id = moveId,
+            .label = i18n::tr("dock.actions.move-to-desktop", "name", desktop.name.empty() ? std::to_string(desktop.index) : desktop.name),
+        });
+        moveDesktopActions.emplace(moveId, static_cast<int>(desktop.index));
+        ++moveId;
+      }
+    }
+    std::int32_t outputId = 2000;
+    const auto* currentOutputInfo = m_platform.wayland().findOutputByWl(m_output);
+    const std::string currentOutput = currentOutputInfo != nullptr ? currentOutputInfo->connectorName : std::string{};
+    if (m_platform.wayland().outputs().size() > 1) {
+      if (moveDesktopActions.empty() && !entries.empty()) {
+        entries.push_back(
+            ContextMenuControlEntry{.id = -6, .label = {}, .enabled = false, .separator = true, .hasSubmenu = false}
+        );
+      }
+      for (const auto& output : m_platform.wayland().outputs()) {
+        if (output.connectorName.empty() || output.connectorName == currentOutput) {
+          continue;
+        }
+        entries.push_back(ContextMenuControlEntry{
+            .id = outputId, .label = i18n::tr("dock.actions.move-to-output", "name", output.connectorName)
+        });
+        moveOutputActions.emplace(outputId, output.connectorName);
+        ++outputId;
+      }
+    }
+  }
   if (showClose) {
     if (!entries.empty()) {
       entries.push_back(
@@ -3162,7 +3204,15 @@ void TaskbarWidget::openTaskContextMenu(const TaskModel& task, InputArea& area, 
   }
   m_contextMenuPopup->setShadowConfig(m_configService.config().shell.shadow);
   m_contextMenuPopup->setOnActivate([this, entryActions, entryAppName, entryWorkingDir, entryTerminal, menuEntry,
-                                     isPinned, infoClose, minimizeActions](const ContextMenuControlEntry& entry) {
+                                     isPinned, infoClose, minimizeActions, moveDesktopActions, moveOutputActions](const ContextMenuControlEntry& entry) {
+    if (const auto move = moveDesktopActions.find(entry.id); move != moveDesktopActions.end()) {
+      m_platform.moveKdeWindowToDesktop(m_contextMenuInfoPrimary.identifier, move->second);
+      return;
+    }
+    if (const auto move = moveOutputActions.find(entry.id); move != moveOutputActions.end()) {
+      m_platform.moveKdeWindowToOutput(m_contextMenuInfoPrimary.identifier, move->second);
+      return;
+    }
     if (const auto action = minimizeActions.find(entry.id); action != minimizeActions.end()) {
       const auto state = m_platform.windowMinimizeState(action->second.window);
       if (state.has_value()) {

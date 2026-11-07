@@ -133,6 +133,8 @@ public:
   void moveToplevelToOutput(const ToplevelInfo& window, wl_output* output);
 
   void activateKdeWindow(const std::string& title, const std::string& appId, const std::string& uuid = {});
+  void moveKdeWindowToDesktop(const std::string& uuid, int desktopIndex);
+  void moveKdeWindowToOutput(const std::string& uuid, const std::string& outputName);
 
   void setToplevelChangeCallback(ChangeCallback callback);
   void bindHyprlandToplevelMappingManager(hyprland_toplevel_mapping_manager_v1* manager);

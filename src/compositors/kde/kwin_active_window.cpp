@@ -563,6 +563,62 @@ for (const window of workspace.windowList()) {{
     }
   }
 
+  void KwinActiveWindow::moveWindowToDesktop(const std::string& uuid, int desktopIndex) {
+    if (!m_scriptInstalled || uuid.empty() || desktopIndex < 1) {
+      return;
+    }
+    const std::string script = std::format(
+        R"js(
+const targetUuid = {};
+const desktopIndex = {};
+const desktop = workspace.desktops[desktopIndex - 1];
+if (desktop) {{
+  for (const window of workspace.windowList()) {{
+    if (window && window.normalWindow && String(window.internalId) === targetUuid) {{
+      window.desktops = [desktop];
+      break;
+    }}
+  }}
+}}
+)js",
+        jsStringLiteral(uuid), desktopIndex
+    );
+    if (!runTransientScript(script, std::format("noctalia-move-desktop-{}", ++m_transientScriptSerial))) {
+      kLog.warn("failed to move kde window to desktop {}", desktopIndex);
+    }
+  }
+
+  void KwinActiveWindow::moveWindowToOutput(const std::string& uuid, const std::string& outputName) {
+    if (!m_scriptInstalled || uuid.empty() || outputName.empty()) {
+      return;
+    }
+    const std::string script = std::format(
+        R"js(
+const targetUuid = {};
+const targetOutput = {};
+let output = null;
+for (const candidate of workspace.screens) {{
+  if (candidate.name === targetOutput) {{
+    output = candidate;
+    break;
+  }}
+}}
+if (output) {{
+  for (const window of workspace.windowList()) {{
+    if (window && window.normalWindow && String(window.internalId) === targetUuid) {{
+      workspace.sendClientToScreen(window, output);
+      break;
+    }}
+  }}
+}}
+)js",
+        jsStringLiteral(uuid), jsStringLiteral(outputName)
+    );
+    if (!runTransientScript(script, std::format("noctalia-move-output-{}", ++m_transientScriptSerial))) {
+      kLog.warn("failed to move kde window to output {}", outputName);
+    }
+  }
+
   std::optional<WindowMinimizeState> KwinActiveWindow::windowMinimizeState(std::string_view uuid) const {
     if (!m_scriptInstalled) {
       return std::nullopt;

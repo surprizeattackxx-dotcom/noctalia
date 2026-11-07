@@ -50,6 +50,9 @@ namespace compositors::kde {
     void closeWindow(const std::string& title, const std::string& appId, const std::string& uuid = {});
     [[nodiscard]] std::optional<WindowMinimizeState> windowMinimizeState(std::string_view uuid) const;
     bool minimizeWindow(const std::string& uuid);
+    // Moves one window (by KWin internalId) to virtual desktop `desktopIndex` (1-based) or to an output by connector name.
+    void moveWindowToDesktop(const std::string& uuid, int desktopIndex);
+    void moveWindowToOutput(const std::string& uuid, const std::string& outputName);
     [[nodiscard]] bool isAvailable() const noexcept { return m_scriptInstalled; }
 
   private:

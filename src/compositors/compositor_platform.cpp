@@ -1679,6 +1679,18 @@ void CompositorPlatform::activateKdeWindow(
   }
 }
 
+void CompositorPlatform::moveKdeWindowToDesktop(const std::string& uuid, int desktopIndex) {
+  if (m_kwinActiveWindow != nullptr && m_kwinActiveWindow->isAvailable()) {
+    m_kwinActiveWindow->moveWindowToDesktop(uuid, desktopIndex);
+  }
+}
+
+void CompositorPlatform::moveKdeWindowToOutput(const std::string& uuid, const std::string& outputName) {
+  if (m_kwinActiveWindow != nullptr && m_kwinActiveWindow->isAvailable()) {
+    m_kwinActiveWindow->moveWindowToOutput(uuid, outputName);
+  }
+}
+
 bool CompositorPlatform::cycleKeyboardLayout() const {
   return m_keyboardLayoutBackend != nullptr && m_keyboardLayoutBackend->cycleLayout();
 }
