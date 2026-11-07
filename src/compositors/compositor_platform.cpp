@@ -1777,6 +1777,13 @@ bool CompositorPlatform::requestSessionExit() const {
     }
     break;
   case compositors::CompositorKind::Kde:
+    // Let ksmserver save the session and close apps cleanly; Noctalia's own menu already confirmed.
+    if (process::launchFirstAvailable(
+            {{"busctl", "--user", "call", "org.kde.Shutdown", "/Shutdown", "org.kde.Shutdown", "logout"}}
+        )) {
+      return true;
+    }
+    break;
   case compositors::CompositorKind::Unknown:
     break;
   }
