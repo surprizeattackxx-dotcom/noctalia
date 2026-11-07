@@ -339,6 +339,13 @@ namespace {
     return compositors::ext_workspace::setOutputPower(on);
   }
 
+  // KWin has no wlr-output-power; Plasma exposes DPMS through kscreen-doctor.
+  [[nodiscard]] bool setKdeOutputPower(WaylandConnection& /*wayland*/, bool on) {
+    return static_cast<bool>(
+        process::runSyncWithTimeout({"kscreen-doctor", "--dpms", on ? "on" : "off"}, std::chrono::milliseconds(3000))
+    );
+  }
+
   [[nodiscard]] std::unique_ptr<compositors::OutputPowerBackend>
   createOutputPowerBackend(compositors::CompositorRuntimeRegistry& runtimeRegistry) {
     switch (compositors::detect()) {
@@ -372,9 +379,10 @@ namespace {
             return compositors::umbriel::setOutputPower(runtime, on);
           }
       );
+    case compositors::CompositorKind::Kde:
+      return std::make_unique<LambdaOutputPowerBackend>(&setKdeOutputPower);
     case compositors::CompositorKind::Dwl:
     case compositors::CompositorKind::Labwc:
-    case compositors::CompositorKind::Kde:
     case compositors::CompositorKind::Unknown:
       return std::make_unique<LambdaOutputPowerBackend>(&setGenericOutputPower);
     }
