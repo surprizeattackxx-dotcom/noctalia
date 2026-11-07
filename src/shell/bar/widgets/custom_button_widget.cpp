@@ -1,5 +1,6 @@
 #include "shell/bar/widgets/custom_button_widget.h"
 
+#include "core/process/process.h"
 #include "render/core/renderer.h"
 #include "render/scene/input_area.h"
 #include "ui/builders.h"
@@ -15,7 +16,9 @@
 CustomButtonWidget::CustomButtonWidget(const Options& options)
     : m_glyphName(StringUtils::trim(options.glyph)), m_labelText(StringUtils::trim(options.label)),
       m_tooltip(StringUtils::trim(options.tooltip)),
-      m_customImage(widget_custom_image::fromConfig(options.customImage, options.customImageColorize)) {}
+      m_customImage(widget_custom_image::fromConfig(options.customImage, options.customImageColorize)),
+      m_labelCommand(StringUtils::trim(options.labelCommand)),
+      m_labelInterval(std::chrono::seconds(static_cast<long>(std::max(2.0F, options.labelInterval)))) {}
 
 void CustomButtonWidget::create() {
   auto area = ui::inputArea({});
@@ -53,6 +56,58 @@ void CustomButtonWidget::create() {
 
   m_area = area.get();
   setRoot(std::move(area));
+
+  if (!m_labelCommand.empty()) {
+    // Results arrive on a worker thread; the repeating main-thread timer applies them.
+    m_labelTimer.startRepeating(std::chrono::seconds(1), [this] { pollLabelCommand(); });
+  }
+}
+
+void CustomButtonWidget::pollLabelCommand() {
+  std::string text;
+  bool haveText = false;
+  bool idle = false;
+  {
+    std::scoped_lock lock(m_labelShared->mutex);
+    if (m_labelShared->hasPending) {
+      text = std::move(m_labelShared->pending);
+      m_labelShared->hasPending = false;
+      haveText = true;
+    }
+    idle = !m_labelShared->running;
+  }
+  if (haveText && text != m_labelText && m_label != nullptr) {
+    m_labelText = text;
+    m_label->setText(m_labelText);
+    requestUpdate();
+  }
+
+  const auto now = std::chrono::steady_clock::now();
+  if (!idle || (m_lastLabelRun != std::chrono::steady_clock::time_point{} && now - m_lastLabelRun < m_labelInterval)) {
+    return;
+  }
+  m_lastLabelRun = now;
+  {
+    std::scoped_lock lock(m_labelShared->mutex);
+    m_labelShared->running = true;
+  }
+  process::RunCallbacks callbacks;
+  callbacks.onExit = [shared = m_labelShared](process::RunResult result) {
+    std::string line;
+    if (result.exitCode == 0 && !result.timedOut) {
+      line = StringUtils::trim(result.out.substr(0, result.out.find('\n')));
+    }
+    std::scoped_lock lock(shared->mutex);
+    shared->pending = std::move(line);
+    shared->hasPending = true;
+    shared->running = false;
+  };
+  process::RunOptions options;
+  options.timeout = std::chrono::milliseconds(5000);
+  if (!process::runAsync(m_labelCommand, std::move(callbacks), std::move(options))) {
+    std::scoped_lock lock(m_labelShared->mutex);
+    m_labelShared->running = false;
+  }
 }
 
 void CustomButtonWidget::doLayout(Renderer& renderer, float containerWidth, float containerHeight) {

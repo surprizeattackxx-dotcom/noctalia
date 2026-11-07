@@ -14,6 +14,15 @@ const noctalia::bar::WidgetDefinition<CustomButtonWidget::Options>& customButton
           }),
           field<&Options::tooltip>({
               .key = "tooltip",
+          }),
+          field<&Options::labelCommand>({
+              .key = "label_command",
+          }),
+          field<&Options::labelInterval>({
+              .key = "label_interval",
+              .minValue = 2.0,
+              .maxValue = 3600.0,
+              .step = 1.0,
           })
       ),
       .glyph = [](const Options& options) { return options.glyph; },

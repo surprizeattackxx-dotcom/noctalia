@@ -5105,6 +5105,14 @@
         "workspace-label-placement": {
           "description": "Corner, centered on the edge, or inside the pill",
           "label": "Workspace Label Placement"
+        },
+        "label-command": {
+          "label": "Label command",
+          "description": "Shell command run every interval; its first line of output becomes the label. Leave empty for a fixed label."
+        },
+        "label-interval": {
+          "label": "Label refresh (seconds)",
+          "description": "How often the label command runs."
         }
       },
       "types": {

@@ -14,6 +14,8 @@ Shows a custom glyph/image and an optional label. What it does on click and scro
 | `custom_image_colorize` | bool   | `false`   | When `true`, tint the custom image with the widget icon color                       |
 | `label`                 | string | `""`      | Optional text label shown next to the glyph or image                                |
 | `tooltip`               | string | `""`      | Optional hover tooltip                                                              |
+| `label_command`         | string | `""`      | Shell command run every `label_interval` seconds; its first output line becomes the label (empty output hides the label) |
+| `label_interval`        | number | `30`      | Seconds between runs of `label_command` (2 to 3600)                                 |
 
 ```toml
 [widget.quick-action]
