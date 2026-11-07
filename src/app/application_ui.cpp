@@ -15,6 +15,7 @@
 #include "launcher/app_provider.h"
 #include "launcher/dmenu_provider.h"
 #include "launcher/emoji_provider.h"
+#include "launcher/krunner_provider.h"
 #include "launcher/math_provider.h"
 #include "launcher/panel_provider.h"
 #include "launcher/plugin_launcher_provider.h"
@@ -643,6 +644,9 @@ void Application::initPanelManagerAndPanels() {
     launcherPanel->addProvider(std::make_unique<SessionProvider>(&m_configService, &m_sessionActionRunner));
     launcherPanel->addProvider(std::make_unique<MathProvider>(&m_clipboardService, &m_configService, &m_httpClient));
     launcherPanel->addProvider(std::make_unique<EmojiProvider>(&m_clipboardService));
+    if (compositors::isKde() && m_bus != nullptr) {
+      launcherPanel->addProvider(std::make_unique<KrunnerProvider>(*m_bus));
+    }
     launcherPanel->setCopiedActivationCallback([this] {
       const ClipboardAutoPasteMode mode = m_configService.config().shell.launcher.autoPaste;
       if (mode == ClipboardAutoPasteMode::Off) {
