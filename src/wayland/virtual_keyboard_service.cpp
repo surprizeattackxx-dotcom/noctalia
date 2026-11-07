@@ -1,6 +1,7 @@
 #include "wayland/virtual_keyboard_service.h"
 
 #include "core/log.h"
+#include "fake-input-client-protocol.h"
 #include "virtual-keyboard-unstable-v1-client-protocol.h"
 
 #include <chrono>
@@ -53,7 +54,46 @@ bool VirtualKeyboardService::bind(zwp_virtual_keyboard_manager_v1* manager, wl_s
   return ensureKeyboard();
 }
 
+bool VirtualKeyboardService::bindKdeFakeInput(org_kde_kwin_fake_input* fakeInput) {
+  m_kdeFakeInput = fakeInput;
+  if (m_kdeFakeInput != nullptr) {
+    org_kde_kwin_fake_input_authenticate(m_kdeFakeInput, "Noctalia", "Paste clipboard history entries");
+  }
+  return m_kdeFakeInput != nullptr;
+}
+
+bool VirtualKeyboardService::sendFakeInputPaste(VirtualPasteShortcut shortcut) {
+  if (m_kdeFakeInput == nullptr) {
+    return false;
+  }
+  constexpr std::uint32_t kPressed = 1;
+  constexpr std::uint32_t kReleased = 0;
+  const bool ctrl = shortcut != VirtualPasteShortcut::ShiftInsert;
+  const bool shift = shortcut != VirtualPasteShortcut::CtrlV;
+  const std::uint32_t key = shortcut == VirtualPasteShortcut::ShiftInsert ? KEY_INSERT : KEY_V;
+  if (ctrl) {
+    org_kde_kwin_fake_input_keyboard_key(m_kdeFakeInput, KEY_LEFTCTRL, kPressed);
+  }
+  if (shift) {
+    org_kde_kwin_fake_input_keyboard_key(m_kdeFakeInput, KEY_LEFTSHIFT, kPressed);
+  }
+  org_kde_kwin_fake_input_keyboard_key(m_kdeFakeInput, key, kPressed);
+  org_kde_kwin_fake_input_keyboard_key(m_kdeFakeInput, key, kReleased);
+  if (shift) {
+    org_kde_kwin_fake_input_keyboard_key(m_kdeFakeInput, KEY_LEFTSHIFT, kReleased);
+  }
+  if (ctrl) {
+    org_kde_kwin_fake_input_keyboard_key(m_kdeFakeInput, KEY_LEFTCTRL, kReleased);
+  }
+  auto* display = wl_proxy_get_display(reinterpret_cast<wl_proxy*>(m_kdeFakeInput));
+  if (display != nullptr) {
+    (void)wl_display_flush(display);
+  }
+  return true;
+}
+
 void VirtualKeyboardService::cleanup() {
+  m_kdeFakeInput = nullptr; // owned and destroyed by WaylandConnection
   if (m_keyboard != nullptr) {
     zwp_virtual_keyboard_v1_destroy(m_keyboard);
     m_keyboard = nullptr;
@@ -73,9 +113,14 @@ void VirtualKeyboardService::cleanup() {
   m_keymapUploaded = false;
 }
 
-bool VirtualKeyboardService::isAvailable() const noexcept { return m_manager != nullptr && m_seat != nullptr; }
+bool VirtualKeyboardService::isAvailable() const noexcept {
+  return m_kdeFakeInput != nullptr || (m_manager != nullptr && m_seat != nullptr);
+}
 
 bool VirtualKeyboardService::sendPasteShortcut(VirtualPasteShortcut shortcut) {
+  if (m_kdeFakeInput != nullptr) {
+    return sendFakeInputPaste(shortcut);
+  }
   if (!ensureKeyboard() || !ensureKeymap()) {
     return false;
   }

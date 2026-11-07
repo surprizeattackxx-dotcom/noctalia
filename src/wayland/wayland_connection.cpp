@@ -13,6 +13,7 @@
 #include "ext-image-copy-capture-v1-client-protocol.h"
 #include "ext-session-lock-v1-client-protocol.h"
 #include "ext-workspace-v1-client-protocol.h"
+#include "fake-input-client-protocol.h"
 #include "fractional-scale-v1-client-protocol.h"
 #include "hyprland-focus-grab-v1-client-protocol.h"
 #include "hyprland-toplevel-mapping-v1-client-protocol.h"
@@ -1695,6 +1696,15 @@ void WaylandConnection::bindGlobal(
     return;
   }
 
+  if (interfaceName == org_kde_kwin_fake_input_interface.name && compositors::isKde()) {
+    const auto bindVersion = std::min<std::uint32_t>(version, 6); // destroy is since 5
+    m_kdeFakeInput = static_cast<org_kde_kwin_fake_input*>(
+        wl_registry_bind(registry, name, &org_kde_kwin_fake_input_interface, bindVersion)
+    );
+    bindVirtualKeyboardService();
+    return;
+  }
+
   if (interfaceName == zwlr_gamma_control_manager_v1_interface.name) {
     const auto bindVersion = std::min(version, kGammaControlManagerVersion);
     m_gammaControlManager = static_cast<zwlr_gamma_control_manager_v1*>(
@@ -1797,6 +1807,10 @@ void WaylandConnection::bindTextInputService() {
 
 void WaylandConnection::bindVirtualKeyboardService() {
   if (m_virtualKeyboardService == nullptr) {
+    return;
+  }
+  if (m_kdeFakeInput != nullptr) {
+    m_virtualKeyboardService->bindKdeFakeInput(m_kdeFakeInput);
     return;
   }
   if (m_virtualKeyboardManager == nullptr || m_seat == nullptr) {
@@ -1918,6 +1932,11 @@ void WaylandConnection::cleanup() {
     m_dataControlOps->destroyManager(m_dataControlManager);
     m_dataControlManager = nullptr;
     m_dataControlOps = nullptr;
+  }
+
+  if (m_kdeFakeInput != nullptr) {
+    org_kde_kwin_fake_input_destroy(m_kdeFakeInput);
+    m_kdeFakeInput = nullptr;
   }
 
   if (m_virtualKeyboardManager != nullptr) {

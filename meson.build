@@ -393,6 +393,8 @@ foreach _p : [
     'protocols/dwl-ipc-unstable-v2.xml'],
   ['org-kde-plasma-virtual-desktop',
     'protocols/org-kde-plasma-virtual-desktop.xml'],
+  ['fake-input',
+    'protocols/fake-input.xml'],
   ['cursor-shape-v1',
     'protocols/cursor-shape-v1.xml'],
   ['wlr-foreign-toplevel-management-unstable-v1',
