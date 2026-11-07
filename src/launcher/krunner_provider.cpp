@@ -19,7 +19,7 @@ namespace {
   constexpr std::size_t kMaxResults = 30;
   constexpr std::size_t kMinQueryLength = 2;
 
-  using Match = sdbus::Struct<std::string, std::string, std::string, std::uint32_t, double, std::map<std::string, sdbus::Variant>>;
+  using Match = sdbus::Struct<std::string, std::string, std::string, std::int32_t, double, std::map<std::string, sdbus::Variant>>;
 
   std::string desktopValue(const std::string& text, const std::string& key) {
     const std::string needle = key + "=";
