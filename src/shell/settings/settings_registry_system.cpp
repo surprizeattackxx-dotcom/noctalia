@@ -29,6 +29,13 @@ namespace settings::registry {
             "battery low warning threshold notification"
         ));
       }
+      entries.push_back(makeEntry(
+          SettingsSection::System, "battery", tr("settings.schema.system.battery-gaming-warning-threshold.label"),
+          tr("settings.schema.system.battery-gaming-warning-threshold.description"),
+          {"battery", "gaming_warning_threshold"},
+          sliderFor(cfg.battery.gamingWarningThreshold, noctalia::config::schema::kBatteryWarningThresholdRange, true),
+          "battery controller gamepad xbox playstation low warning threshold notification"
+      ));
       for (const auto& device : env.batteryDeviceOptions) {
         int value = 0;
         if (const auto it = env.batteryWarningThresholds.find(device.value); it != env.batteryWarningThresholds.end()) {

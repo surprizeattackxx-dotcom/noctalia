@@ -32,5 +32,19 @@ int main() {
   // No system battery pointer: a laptop pack resolves to entry-or-0, never the global threshold.
   TEST_CHECK(batteryWarningThresholdForDevice(config, secondBattery, nullptr) == 0);
 
+  // A game controller warns at gaming_warning_threshold with no entry; an explicit entry wins; 0 disables it.
+  UPowerDeviceInfo controller;
+  controller.path = "/org/freedesktop/UPower/devices/gaming_input_hid_001";
+  controller.model = "Xbox Wireless Controller";
+  controller.type = UPowerDeviceType::GamingInput;
+  TEST_CHECK(batteryWarningThresholdForDevice(config, controller, &systemBattery) == config.gamingWarningThreshold);
+  TEST_CHECK(config.gamingWarningThreshold == 15);
+  BatteryConfig withController;
+  withController.deviceThresholds.push_back({"Xbox Wireless Controller", 30});
+  TEST_CHECK(batteryWarningThresholdForDevice(withController, controller, &systemBattery) == 30);
+  BatteryConfig gamingOff;
+  gamingOff.gamingWarningThreshold = 0;
+  TEST_CHECK(batteryWarningThresholdForDevice(gamingOff, controller, &systemBattery) == 0);
+
   return 0;
 }
