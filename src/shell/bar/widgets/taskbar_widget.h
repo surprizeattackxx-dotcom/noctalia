@@ -3,6 +3,7 @@
 #include "compositors/compositor_platform.h"
 #include "core/timer_manager.h"
 #include "shell/bar/widget.h"
+#include "shell/bar/widgets/taskbar_preview_popup.h"
 #include "system/desktop_entry.h"
 #include "system/icon_resolver.h"
 #include "system/window_state.h"
@@ -77,6 +78,8 @@ struct TaskbarWidgetOptions {
   ColorSpec occupiedColor = colorSpecFromRole(ColorRole::Secondary);
   ColorSpec emptyColor = colorSpecFromRole(ColorRole::Secondary);
   ColorSpec urgentColor = colorSpecFromRole(ColorRole::Error);
+  bool hoverPreviews = true;
+  int previewDelay = 350;
   bool showRunning = true;
   bool showWindowTitle = false;
   int windowTitleMaxWidth = 100;
@@ -137,6 +140,7 @@ private:
     zwlr_foreign_toplevel_handle_v1* firstHandle = nullptr;
     std::optional<WindowMinimizeState> minimizeState;
     std::size_t minimizedCount = 0;
+    std::vector<std::string> previewWindowIds;
   };
 
   struct WorkspaceModel {
@@ -220,6 +224,10 @@ private:
   void buildDesktopIconIndex();
   ResolvedIcon resolveIcon(const std::string& appId, const std::string& iconNameOrPath);
   void openTaskContextMenu(const TaskModel& task, InputArea& area, const std::vector<TaskRef>& members = {});
+  bool canPreview(const TaskModel& task) const;
+  std::vector<TaskbarPreviewEntry> previewEntries(TaskRef task, const std::vector<TaskRef>& members) const;
+  void schedulePreview(TaskRef task, std::vector<TaskRef> members, InputArea* area);
+  void closePreview();
   void activateAdjacentWorkspace(int direction);
   void activateAdjacentTask(int direction);
   bool activeWorkspaceIndex(std::size_t& index) const;
@@ -327,6 +335,10 @@ private:
   std::unordered_map<std::uintptr_t, PendingWorkspaceTransition> m_pendingWorkspaceTransitions;
   std::unordered_map<std::string, std::size_t> m_groupedAppCycleCursor;
   std::unordered_map<std::string, std::string> m_appIconsByLower;
+  std::unique_ptr<TaskbarPreviewPopup> m_taskPreview;
+  Timer m_previewTimer;
+  std::optional<TaskRef> m_previewTask;
+  std::vector<TaskRef> m_previewMembers;
   std::unique_ptr<ContextMenuPopup> m_contextMenuPopup;
   std::vector<zwlr_foreign_toplevel_handle_v1*> m_contextMenuHandles;
   zwlr_foreign_toplevel_handle_v1* m_contextMenuPrimaryHandle = nullptr;
