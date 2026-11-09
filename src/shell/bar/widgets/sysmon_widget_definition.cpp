@@ -181,6 +181,11 @@ const noctalia::bar::WidgetDefinition<SysmonWidget::Options, SysmonWidgetDefinit
                           .labelKey = "settings.widgets.options.gauge",
                       },
                       {
+                          .value = SysmonVisualization::Ring,
+                          .configValue = "ring",
+                          .labelKey = "settings.widgets.options.ring",
+                      },
+                      {
                           .value = SysmonVisualization::Graph,
                           .configValue = "graph",
                           .labelKey = "settings.widgets.options.graph",
