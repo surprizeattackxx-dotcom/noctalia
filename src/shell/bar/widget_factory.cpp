@@ -29,6 +29,8 @@
 #include "scripting/plugin_manifest.h"
 #include "scripting/plugin_registry.h"
 #include "shell/bar/widgets/idle_inhibitor_widget.h"
+#include "shell/bar/widgets/job_progress_widget.h"
+#include "shell/bar/widgets/job_progress_widget_definition.h"
 #include "shell/bar/widgets/keyboard_layout_widget.h"
 #include "shell/bar/widgets/keyboard_layout_widget_definition.h"
 #include "shell/bar/widgets/launcher_widget.h"
@@ -264,6 +266,11 @@ std::unique_ptr<Widget> WidgetFactory::create(
           }},
       {"power_profile", [](const WidgetFactory& f, const BuiltinWidgetContext& context) {
             return createWidget<PowerProfileWidget>(context.contentScale, f.m_powerProfiles);
+          }},
+      {"job_progress", [](const WidgetFactory& /*f*/, const BuiltinWidgetContext& context) {
+            return createWidget<JobProgressWidget>(
+                context.contentScale, jobProgressWidgetDefinition().resolve(context.config, context.settingContext)
+            );
           }},
       {"privacy", [](const WidgetFactory& f, const BuiltinWidgetContext& context) {
             return createWidget<PrivacyWidget>(

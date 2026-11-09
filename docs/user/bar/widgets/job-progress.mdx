@@ -1,0 +1,14 @@
+---
+title: job_progress
+description: Shows a progress ring while KDE file operations are running.
+sidebar:
+  order: 19
+---
+
+Appears only while a background job is running, such as a Dolphin copy, move, delete or extraction reported through [KDE file operation progress](/noctalia/services/notifications/#kde-file-operation-progress). A ring around the icon fills with the overall progress. Hovering lists the running jobs with their percentage. Clicking brings back the progress popups of running jobs that were closed.
+
+The widget stays hidden when nothing is running, and on desktops other than KDE Plasma.
+
+| Setting        | Type  | Default   | Description                    |
+| -------------- | ----- | --------- | ------------------------------ |
+| `active_color` | color | `primary` | Colour of the icon and the ring. |

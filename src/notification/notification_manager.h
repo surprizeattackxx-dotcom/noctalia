@@ -66,7 +66,11 @@ struct NotificationRequest {
   std::optional<NotificationImageData> imageData = std::nullopt;
   std::optional<std::string> category = std::nullopt;
   std::optional<std::string> desktopEntry = std::nullopt;
+  std::optional<int> progress = std::nullopt;
   std::optional<uint32_t> forcedId = std::nullopt;
+  // Distinct operations (jobs) must never share an implicit duplicate's id or controls.
+  // Explicit replacesId updates still work when coalescing is disabled.
+  bool coalesce = true;
 };
 
 class NotificationManager {
@@ -111,6 +115,10 @@ public:
   // Actions on internally generated notifications are handled in-process: there is no D-Bus client
   // to receive ActionInvoked, so routing them to the external callback would signal into the void.
   void setInternalActionCallback(ActionInvokeCallback callback);
+  /// Extra in-process action handlers (besides the single calendar callback); each sees every internal action and
+  /// ignores ids it does not own. Returns a token for removeInternalActionHandler.
+  int addInternalActionHandler(ActionInvokeCallback callback);
+  void removeInternalActionHandler(int token);
   void setCloseCallback(CloseCallback callback);
   void setReplyCallback(ReplyCallback callback);
   bool hasPendingDBusClose(uint32_t id) const noexcept;
@@ -229,6 +237,7 @@ private:
   std::vector<std::pair<int, EventCallback>> m_eventCallbacks;
   ActionInvokeCallback m_actionInvokeCallback;
   ActionInvokeCallback m_internalActionCallback;
+  std::vector<std::pair<int, ActionInvokeCallback>> m_internalActionHandlers;
   CloseCallback m_closeCallback;
   StateCallback m_stateCallback;
   ReplyCallback m_replyCallback;

@@ -12,6 +12,7 @@
 #include "shell/bar/widgets/clock_widget_definition.h"
 #include "shell/bar/widgets/control_center_widget_definition.h"
 #include "shell/bar/widgets/custom_button_widget_definition.h"
+#include "shell/bar/widgets/job_progress_widget_definition.h"
 #include "shell/bar/widgets/keyboard_layout_widget_definition.h"
 #include "shell/bar/widgets/launcher_widget_definition.h"
 #include "shell/bar/widgets/lock_keys_widget_definition.h"
@@ -134,6 +135,7 @@ int main() {
   checkDefinition("brightness", brightnessWidgetDefinition);
   checkDefinition<true>("caffeine", caffeineWidgetDefinition);
   checkDefinition("clipboard", clipboardWidgetDefinition);
+  checkDefinition("job_progress", jobProgressWidgetDefinition);
   checkDefinition("clock", clockWidgetDefinition);
   checkDefinition("control-center", controlCenterWidgetDefinition);
   checkDefinition("custom_button", customButtonWidgetDefinition);
