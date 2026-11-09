@@ -197,6 +197,9 @@ void GamepadActivityMonitor::dispatch(const std::vector<pollfd>& fds, std::size_
     closeDevice(*it);
   }
   if (rescan) {
+    // A node can become readable after it appears (udev applies the uaccess ACL a moment later, signalled by
+    // IN_ATTRIB) and a path can be reused by a different device, so forget earlier rejections before probing.
+    m_rejected.clear();
     scanDevices();
   }
   if (activity) {
