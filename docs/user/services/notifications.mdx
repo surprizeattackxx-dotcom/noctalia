@@ -126,6 +126,41 @@ This affects new notifications only. Use `noctalia msg notification-clear-histor
 
 Shell notifications are toast-only and are not kept in history, with one exception: [calendar reminders](/noctalia/services/calendar/#reminders) are retained, because a reminder missed while you were away has no other place to surface. They appear under the app name `Calendar`, so a filter matching that name controls their toast, sound, and history like any other notification.
 
+## Quiet hours
+
+Quiet hours turn Do Not Disturb on and off at set times every day. Configure them in **Settings → Notifications**, or in config:
+
+```toml
+[notification]
+quiet_hours       = true
+quiet_hours_start = "22:00"   # HH:MM, 24-hour, local time
+quiet_hours_end   = "07:00"   # an end before the start runs past midnight
+```
+
+- The schedule only turns off what it turned on. If Do Not Disturb was already on when quiet hours began, it stays on afterwards.
+- You can still switch Do Not Disturb by hand during quiet hours; the schedule does not switch it back until the next start time.
+- [Game mode](/noctalia/services/game-mode/) and the lock screen keep their own Do Not Disturb. If quiet hours begin or end while one of them is active, the change applies when the game or the lock ends.
+- Starting Noctalia inside the window turns Do Not Disturb on.
+- A malformed time, or the same start and end, disables the schedule.
+
+## Progress notifications
+
+A notification that carries a `value` hint (an integer from 0 to 100, as in `notify-send -h int:value:60`) shows a progress bar under its text. Sending the same notification again with a new value (`notify-send -r <id>`) moves the bar in place.
+
+```sh
+id=$(notify-send -p -t 0 -h int:value:20 "Downloading" "update.tar.zst")
+notify-send -r "$id" -t 0 -h int:value:80 "Downloading" "update.tar.zst"
+```
+
+## KDE file operation progress
+
+On KDE Plasma, Noctalia answers KDE's job progress service (`org.kde.kuiserver` and `org.kde.JobViewServer`). KDE apps that use KIO, such as Dolphin, then report copies, moves, deletes and extractions here instead of opening their own progress windows. Each job becomes one notification with a progress bar, the current file, the file count, the transferred size, the speed and the time remaining. **Pause** / **Resume** and **Cancel** buttons appear when the app allows them; they act on the real job.
+
+- A job appears after it has run for about a second, so quick operations do not flash a popup. Jobs that fail always show a notification.
+- Closing the popup does not stop the job; it only hides it. Cancel stops it. The [`job_progress`](/noctalia/bar/widgets/job-progress/) bar widget keeps showing a hidden job, and clicking it brings the popup back.
+- When a job finishes, the popup becomes a short "finished" notification that stays in history, with an **Open folder** button when the destination is a local folder. A job whose popup you closed finishes silently.
+- It is only active when Noctalia owns notifications (`[notification] enable_daemon = true`) and the notification service started.
+
 ## Related IPC
 
 For Do Not Disturb status/toggle commands and notification clear actions, see [Media & UI → Notifications](/noctalia/ipc/media-and-ui/#notifications).

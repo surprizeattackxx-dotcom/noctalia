@@ -10,6 +10,7 @@
 #include "util/file_utils.h"
 #include "util/string_utils.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <sdbus-c++/Error.h>
 #include <sdbus-c++/Types.h>
@@ -311,6 +312,22 @@ namespace notification_dbus {
     return std::nullopt;
   }
 
+  std::optional<int> notifyProgressFromHints(const std::map<std::string, sdbus::Variant>& hints) {
+    const auto it = hints.find("value");
+    if (it == hints.end()) {
+      return std::nullopt;
+    }
+    try {
+      return std::clamp(it->second.get<std::int32_t>(), 0, 100);
+    } catch (...) {
+    }
+    try {
+      return std::clamp(static_cast<std::int32_t>(it->second.get<std::uint32_t>()), 0, 100);
+    } catch (...) {
+    }
+    return std::nullopt;
+  }
+
   namespace {
 
     using NotificationImageDataStruct = sdbus::Struct<
@@ -449,6 +466,7 @@ namespace notification_dbus {
             .imageData = notifyImageDataFromHints(hints),
             .category = notifyCategoryFromHints(hints),
             .desktopEntry = notifyDesktopEntryFromHints(hints),
+            .progress = notifyProgressFromHints(hints),
         }
     );
   }

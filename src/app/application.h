@@ -17,6 +17,7 @@
 #include "core/timer_manager.h"
 #include "dbus/launcher_entry/launcher_entry_service.h"
 #include "dbus/network/external_ip_service.h"
+#include "dbus/notification/kde_job_view_server.h"
 #include "dbus/notification/notification_poll_source.h"
 #include "dbus/secret/secret_collection_probe.h"
 #include "hooks/battery_hook_state.h"
@@ -32,6 +33,7 @@
 #include "launcher/dmenu_ipc.h"
 #include "net/http_client.h"
 #include "net/http_client_poll_source.h"
+#include "notification/automatic_dnd_state.h"
 #include "notification/notification_manager.h"
 #include "render/codecs/thumbnail_service.h"
 #include "render/core/async_texture_cache.h"
@@ -225,7 +227,8 @@ private:
   void onSecretServiceCollectionChanged();
   void retrySecretServiceConsumers(bool defaultCollectionUnlocked = false);
   void scheduleNotificationShellRefresh();
-  // Enables the lockscreen DND option when locking and restores the pre-lock state on unlock.
+  // Updates one automatic request without restoring another owner's transient state.
+  void setAutomaticDoNotDisturb(AutomaticDndState::Owner owner, bool active);
   void syncLockScreenDoNotDisturb();
   void syncPolkitAgent();
   bool likelySupportsInSessionPolkit() const noexcept;
@@ -300,8 +303,10 @@ private:
   IdleManager m_idleManager;
   GamepadActivityMonitor m_gamepadMonitor;
   GameMode m_gameMode;
-  // State saved on entering game mode so leaving restores exactly what was there.
-  bool m_gameModePrevDnd = false;
+  AutomaticDndState m_automaticDnd;
+  void syncQuietHours();
+  Timer m_quietHoursTimer;
+  bool m_quietHoursActive = false;
   bool m_gameModeSetCaffeine = false;
   std::string m_gameModePrevProfile;
   PluginIdleWatches m_pluginIdleWatches;
@@ -329,7 +334,6 @@ private:
   std::optional<bool> m_notificationDaemonEnabled;
   bool m_notificationDaemonInitFailed = false;
   bool m_notificationShellRefreshScheduled = false;
-  bool m_lockScreenAutoDnd = false;
   BatteryHookState m_batteryHookState;
   BatteryWarningMonitor m_batteryWarningMonitor;
   std::optional<bool> m_prevBatteryPluggedForEvents;
@@ -341,6 +345,7 @@ private:
   std::unique_ptr<KeyboardBacklightService> m_keyboardBacklightService;
   std::unique_ptr<TrayService> m_trayService;
   std::unique_ptr<NotificationDBusHost> m_notificationDbus;
+  std::unique_ptr<KdeJobViewServer> m_kdeJobViewServer; // KIO job progress as notifications (KDE only)
   std::unique_ptr<sdbus::IProxy> m_notificationBusNameWatchProxy;
   bool m_notificationBusNameWatchInstalled = false;
   std::unique_ptr<sdbus::IProxy> m_secretServiceNameWatchProxy;
