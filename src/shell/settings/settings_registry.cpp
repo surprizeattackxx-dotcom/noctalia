@@ -3397,6 +3397,16 @@ namespace settings {
         ToggleSetting{.checked = cfg.gameMode.autoDetect}, "game mode gaming steam fullscreen"
     ));
     entries.push_back(makeEntry(
+        SettingsSection::Power, "idle", tr("settings.schema.game-mode.require-focus.label"),
+        tr("settings.schema.game-mode.require-focus.description"), {"game_mode", "require_focus"},
+        ToggleSetting{.checked = cfg.gameMode.requireFocus}, "game mode focus alt tab"
+    ));
+    entries.push_back(makeEntry(
+        SettingsSection::Power, "idle", tr("settings.schema.game-mode.require-focus.label"),
+        tr("settings.schema.game-mode.require-focus.description"), {"game_mode", "require_focus"},
+        ToggleSetting{.checked = cfg.gameMode.requireFocus}, "game mode focus alt tab"
+    ));
+    entries.push_back(makeEntry(
         SettingsSection::Power, "idle", tr("settings.schema.game-mode.dnd.label"),
         tr("settings.schema.game-mode.dnd.description"), {"game_mode", "dnd"},
         ToggleSetting{.checked = cfg.gameMode.dnd}, "game mode do not disturb notifications"

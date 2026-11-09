@@ -64,11 +64,17 @@ void GameMode::tick() {
   bool detected = false;
   std::string app;
   if (m_config.autoDetect && m_provider) {
-    app = m_provider();
-    if (!app.empty()) {
-      detected = std::ranges::any_of(m_config.apps, [&app](const std::string& pattern) {
-        return globMatch(StringUtils::trim(pattern), app);
-      });
+    for (const std::string& candidate : m_provider(m_config.requireFocus)) {
+      if (candidate.empty()) {
+        continue;
+      }
+      if (std::ranges::any_of(m_config.apps, [&candidate](const std::string& pattern) {
+            return globMatch(StringUtils::trim(pattern), candidate);
+          })) {
+        detected = true;
+        app = candidate;
+        break;
+      }
     }
   }
   if (detected != m_detected || (detected && app != m_detectedApp)) {

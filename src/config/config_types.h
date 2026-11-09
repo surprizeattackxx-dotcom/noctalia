@@ -1432,6 +1432,9 @@ struct GameModeConfig {
   bool autoDetect = true;
   /// Focused-window app id globs (case-insensitive, `*` wildcard). `steam_app_*` matches every Proton game.
   std::vector<std::string> apps = {"steam_app_*", "gamescope"};
+  /// true: game mode follows the focused window and ends when you switch away. false: it stays on while any
+  /// matching window is running, so alt-tabbing to chat does not end it.
+  bool requireFocus = true;
   bool dnd = true;         // do-not-disturb while active
   bool inhibitIdle = true; // hold off idle lock / screen off / suspend while active
   /// power-profiles-daemon profile to switch to while active (e.g. "performance"); empty leaves it alone.

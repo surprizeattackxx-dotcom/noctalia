@@ -11,11 +11,12 @@ Game mode keeps the shell out of the way while you play. While it is on, Noctali
 [game_mode]
 auto_detect   = true                          # follow the focused window
 apps          = ["steam_app_*", "gamescope"]  # app id globs, case-insensitive, * is a wildcard
+require_focus = true                          # false: stay on while a matching window is running, even unfocused
 dnd           = true                          # do not disturb while active
 inhibit_idle  = true                          # hold off idle actions while active
 power_profile = ""                            # e.g. "performance"; empty leaves it alone
 ```
 
-Detection checks the focused window's app id every two seconds. `steam_app_*` matches every Proton game started from Steam. For anything else, find the app id with the taskbar or `noctalia msg` tooling and add it to `apps`.
+Detection checks the focused window's app id every two seconds, so game mode ends when you switch to another window. Set `require_focus = false` to keep it on for as long as a matching window is running instead. `steam_app_*` matches every Proton game started from Steam. For anything else, find the app id with the taskbar or `noctalia msg` tooling and add it to `apps`.
 
 Force it from a keybind or script with `noctalia msg game-mode on|off|auto|toggle|status`. A forced `on` or `off` wins over detection until you send `auto`. The `game_mode_started` and `game_mode_ended` [hooks](/noctalia/automation/hooks/) run on every change. Controller input already counts as idle activity (see [Idle](/noctalia/services/idle/)).

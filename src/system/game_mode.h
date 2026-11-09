@@ -6,6 +6,7 @@
 #include <functional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 class IpcService;
 
@@ -19,7 +20,8 @@ class IpcService;
 class GameMode {
 public:
   using ChangeCallback = std::function<void(bool active)>;
-  using ActiveAppProvider = std::function<std::string()>;
+  /// App ids to test against `apps`: just the focused window, or every running window when `requireFocus` is off.
+  using ActiveAppProvider = std::function<std::vector<std::string>(bool focusedOnly)>;
 
   enum class Override : std::uint8_t { Auto, On, Off };
 

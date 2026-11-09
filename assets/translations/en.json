@@ -3949,6 +3949,10 @@
         "inhibit-idle": {
           "label": "Game mode: block idle",
           "description": "Hold off idle lock, screen off and suspend while game mode is on"
+        },
+        "require-focus": {
+          "label": "Game mode: only while focused",
+          "description": "End game mode when you switch away from the game; turn off to keep it on while the game is running"
         }
       }
     },

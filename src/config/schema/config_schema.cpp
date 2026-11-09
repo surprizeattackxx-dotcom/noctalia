@@ -42,11 +42,9 @@ namespace noctalia::config::schema {
 
   const Schema<GameModeConfig>& gameModeSchema() {
     static const Schema<GameModeConfig> s = {
-        field(&GameModeConfig::autoDetect, "auto_detect"),
-        field(&GameModeConfig::apps, "apps"),
-        field(&GameModeConfig::dnd, "dnd"),
-        field(&GameModeConfig::inhibitIdle, "inhibit_idle"),
-        field(&GameModeConfig::powerProfile, "power_profile"),
+        field(&GameModeConfig::autoDetect, "auto_detect"),     field(&GameModeConfig::apps, "apps"),
+        field(&GameModeConfig::requireFocus, "require_focus"), field(&GameModeConfig::dnd, "dnd"),
+        field(&GameModeConfig::inhibitIdle, "inhibit_idle"),   field(&GameModeConfig::powerProfile, "power_profile"),
     };
     return s;
   }

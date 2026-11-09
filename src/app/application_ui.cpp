@@ -798,9 +798,12 @@ void Application::initNotificationAndOsd() {
   );
   m_idleGraceOverlay.initialize(m_wayland, &m_renderContext);
   m_pluginIdleWatches.initialize(m_wayland);
-  m_gameMode.setActiveAppProvider([this] {
+  m_gameMode.setActiveAppProvider([this](bool focusedOnly) {
+    if (!focusedOnly) {
+      return m_compositorPlatform.runningAppIds();
+    }
     const auto active = m_compositorPlatform.activeToplevel();
-    return active.has_value() ? active->appId : std::string{};
+    return active.has_value() ? std::vector<std::string>{active->appId} : std::vector<std::string>{};
   });
   m_gameMode.setChangeCallback([this](bool active) { applyGameMode(active); });
   m_gameMode.configure(m_configService.config().gameMode);
