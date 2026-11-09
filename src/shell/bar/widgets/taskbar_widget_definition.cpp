@@ -43,6 +43,15 @@ const noctalia::bar::WidgetDefinition<TaskbarWidgetOptions>& taskbarWidgetDefini
               .type = "taskbar",
               .fields =
                   {
+                      field<&Options::hoverPreviews>({
+                          .key = "hover_previews",
+                          .presentation = presentation("taskbar.windows"),
+                      }),
+                      field<&Options::previewDelay>({
+                          .key = "preview_delay",
+                          .minValue = 100.0, .maxValue = 2000.0, .step = 50.0,
+                          .presentation = presentation("taskbar.windows", matches("hover_previews", {"true"})),
+                      }),
                       field<&Options::showAllOutputs>({
                           .key = "show_all_outputs",
                           .presentation = presentation("taskbar.windows"),

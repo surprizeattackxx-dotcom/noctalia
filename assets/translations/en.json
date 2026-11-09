@@ -1552,6 +1552,7 @@
         "privacy": "Privacy",
         "profile": "Profile",
         "providers": "Providers",
+        "quiet-hours": "Quiet Hours",
         "screen-corners": "Screen Corners",
         "screen-time": "Screen Time",
         "screenshot": "Screenshot",
@@ -5044,6 +5045,10 @@
           "description": "Reload the scripted widget when its source changes",
           "label": "Hot Reload"
         },
+        "hover-previews": {
+          "description": "Show clickable window snapshots when hovering a running taskbar icon on KDE Plasma",
+          "label": "Window Hover Previews"
+        },
         "icon-color": {
           "description": "Overrides the widget color for icons only; fixed hex colors are also supported",
           "label": "Icon Color"
@@ -5218,6 +5223,10 @@
         "prefer-symbolic-icons": {
           "description": "Prefer -symbolic variants from the active icon theme when available, falling back to regular application icons",
           "label": "Prefer Symbolic Icons"
+        },
+        "preview-delay": {
+          "description": "Delay in milliseconds before opening taskbar window previews",
+          "label": "Preview Hover Delay"
         },
         "reversed": {
           "description": "Reverse the low-to-high frequency order of the bars",
