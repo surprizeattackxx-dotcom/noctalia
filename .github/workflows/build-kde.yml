@@ -1,0 +1,22 @@
+name: build-kde
+on:
+  push:
+    branches: [kde, 'kde-rebase-*']
+  pull_request:
+    branches: [kde]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm --needed base-devel git meson ninja wayland wayland-protocols libglvnd \
+            freetype2 fontconfig cairo pango harfbuzz libxkbcommon glib2 libsecret libsodium sdbus-cpp \
+            libpipewire wireplumber polkit pam curl libwebp libjxl libsndfile librsvg libqalculate libxml2 \
+            md4c tomlplusplus libical nlohmann-json stb jemalloc
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: meson setup build --buildtype=release -Dtests=disabled
+      - name: Compile
+        run: meson compile -C build

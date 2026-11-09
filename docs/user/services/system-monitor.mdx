@@ -9,6 +9,7 @@ sidebar:
 [system.monitor]
 enabled = true                      # sample CPU, memory, network, load, temperature, GPU VRAM, and disk statistics
 cpu_temp_sensor_path = ""           # exact temp*_input path for CPU temperature override; empty = auto
+temperature_unit = "celsius"        # celsius | fahrenheit: unit for CPU and GPU temperature readouts
 cpu_poll_seconds = 2.0              # CPU usage, frequency, temperature, and load average
 gpu_poll_seconds = 5.0              # GPU temperature, usage, and VRAM; probes run only while displayed
 memory_poll_seconds = 2.0           # RAM usage
@@ -77,6 +78,8 @@ Bar and desktop `sysmon` widgets and the Control Center System tab all draw from
 | `disk_free`     | `380 GiB`  | Disk space available for the widget's `path`  | ✓   | —       |
 | `net_rx`        | `1.2 MB/s` | Network download speed (decimal, auto-scaled) | ✓   | ✓       |
 | `net_tx`        | `256 kB/s` | Network upload speed (decimal, auto-scaled)   | ✓   | ✓       |
+
+On NVIDIA GPUs, the tooltip of a `gpu_vram` or `gpu_vram_used` widget also lists the five programs using the most video memory (grouped by program name, smaller than 16 MiB left out), for example `rs2client.exe 2.5 GiB`. The list is sampled with the VRAM stat and needs a driver that provides the NVML `_v3` process queries; without them the tooltip shows the usual stats only.
 
 A stat whose source is unavailable on the machine - GPU VRAM on an integrated GPU, for example - is shown as unavailable rather than as zero. What each GPU vendor can report is covered under [GPU data sources](#gpu-data-sources).
 

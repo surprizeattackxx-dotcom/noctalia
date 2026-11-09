@@ -6,6 +6,11 @@
 
 namespace FormatUnits {
 
+  /// Shell-wide temperature unit for hardware readouts (set from system.monitor.temperature_unit).
+  void setTemperatureFahrenheit(bool fahrenheit);
+  /// "65°C" or "149°F", rounded to whole degrees.
+  [[nodiscard]] std::string formatTemperatureFromCelsius(double celsius);
+
   inline constexpr int kMinCompactByteRateDecimalPlaces = 0;
   inline constexpr int kMaxCompactByteRateDecimalPlaces = 3;
 

@@ -67,6 +67,34 @@ namespace settings::registry {
 
   void addIdleSettings(std::vector<SettingEntry>& entries, const Config& cfg) {
     using i18n::tr;
+    // Game mode
+    entries.push_back(makeEntry(
+        SettingsSection::Power, "idle", tr("settings.schema.game-mode.auto-detect.label"),
+        tr("settings.schema.game-mode.auto-detect.description"), {"game_mode", "auto_detect"},
+        ToggleSetting{.checked = cfg.gameMode.autoDetect}, "game mode gaming steam fullscreen"
+    ));
+    entries.push_back(makeEntry(
+        SettingsSection::Power, "idle", tr("settings.schema.game-mode.require-focus.label"),
+        tr("settings.schema.game-mode.require-focus.description"), {"game_mode", "require_focus"},
+        ToggleSetting{.checked = cfg.gameMode.requireFocus}, "game mode focus alt tab"
+    ));
+    entries.push_back(makeEntry(
+        SettingsSection::Power, "idle", tr("settings.schema.game-mode.dnd.label"),
+        tr("settings.schema.game-mode.dnd.description"), {"game_mode", "dnd"},
+        ToggleSetting{.checked = cfg.gameMode.dnd}, "game mode do not disturb notifications"
+    ));
+    entries.push_back(makeEntry(
+        SettingsSection::Power, "idle", tr("settings.schema.game-mode.inhibit-idle.label"),
+        tr("settings.schema.game-mode.inhibit-idle.description"), {"game_mode", "inhibit_idle"},
+        ToggleSetting{.checked = cfg.gameMode.inhibitIdle}, "game mode idle lock screen off suspend"
+    ));
+
+    // Idle
+    entries.push_back(makeEntry(
+        SettingsSection::Power, "idle", tr("settings.schema.idle.gamepad-activity.label"),
+        tr("settings.schema.idle.gamepad-activity.description"), {"idle", "gamepad_activity"},
+        ToggleSetting{.checked = cfg.idle.gamepadActivity}, "idle gamepad controller joystick game activity"
+    ));
     entries.push_back(makeEntry(
         SettingsSection::Power, "idle", tr("settings.schema.idle.pre-action-fade.label"),
         tr("settings.schema.idle.pre-action-fade.description"), {"idle", "pre_action_fade_seconds"},

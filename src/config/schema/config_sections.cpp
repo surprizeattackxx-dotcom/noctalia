@@ -56,6 +56,7 @@ namespace noctalia::config::schema {
         t.push_back(makeSection("osd", &Config::osd, osdSchema()));
         t.push_back(makeSection("system", &Config::system, systemSchema()));
         t.push_back(makeSection("weather", &Config::weather, weatherSchema()));
+        t.push_back(makeSection("game_mode", &Config::gameMode, gameModeSchema()));
         t.push_back(makeSection("calendar", &Config::calendar, calendarSchema()));
         t.push_back(makeSection("audio", &Config::audio, audioSchema()));
         t.push_back(makeSection("brightness", &Config::brightness, brightnessSchema()));

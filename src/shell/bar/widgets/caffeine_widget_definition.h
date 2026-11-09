@@ -1,7 +1,6 @@
 #pragma once
 
 #include "shell/bar/widget_definition.h"
+#include "shell/bar/widgets/idle_inhibitor_widget.h"
 
-#include <variant>
-
-const noctalia::bar::WidgetDefinition<std::monostate>& caffeineWidgetDefinition();
+[[nodiscard]] const noctalia::bar::WidgetDefinition<IdleInhibitorWidget::Options>& caffeineWidgetDefinition();

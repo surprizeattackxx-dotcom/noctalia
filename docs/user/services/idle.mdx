@@ -17,7 +17,11 @@ behavior_order = ["lock", "screen-off", "suspend"]
 # 0 disables the overlay (the command runs as soon as the compositor reports idle).
 # Parsed between 0 and 120; the in-app Settings stepper uses whole seconds 0–30.
 pre_action_fade_seconds = 2.0
+# Count game controller input as activity (default true).
+gamepad_activity = true
 ```
+
+`gamepad_activity` watches game controllers (evdev gamepads and joysticks) because compositors only track keyboard, pointer and touch. A button press or a large stick or trigger move postpones any behavior whose timeout has not yet passed since that input; stick drift is ignored. Noctalia needs read access to the controller's `/dev/input/event*` node, which systemd-logind grants to the logged-in user on most distributions. Check `~/.cache/noctalia/noctalia.log` for a `watching controller` line.
 
 `behavior_order` controls the order named behaviors are evaluated and emitted by Settings. Names not listed are appended after the listed entries; unknown names are ignored.
 
@@ -55,6 +59,7 @@ resume_command = "notify-send 'Idle' 'Back from idle'"
 | `locked_timeout`      | number | `0`         | Alternate timeout while the session is locked; `0` uses `timeout`. With `timeout = 0`, a positive value enables the behavior only while locked |
 | `command`             | string | `""`        | Only for `action = "command"`: a shell command to run when idle                                                                                |
 | `resume_command`      | string | `""`        | Optional shell command to run when activity resumes                                                                                            |
+| `ignore_inhibitors`   | bool   | `false`     | Count only real input (keyboard, pointer, touch) as activity: caffeine and playback inhibits no longer hold this behavior off. Needs a compositor with ext-idle-notify v2 (KWin 6.x, Hyprland, sway, niri); otherwise the behavior stays inhibitable. Typical use: lock after 10 minutes even with caffeine on, while screen off and suspend stay inhibited. |
 | `lock_before_suspend` | bool   | `true`      | For `action = "suspend"`, lock the session first (equivalent to `action = "lock_and_suspend"`). Set `false` to suspend without locking.        |
 
 `action = "screen_off"` turns the monitors off on idle and **back on automatically** when you return. If `resume_command` is set, Noctalia restores monitor power first and then runs the command. The command still runs if monitor power restoration reports a failure.

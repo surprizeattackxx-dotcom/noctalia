@@ -21,6 +21,9 @@ public:
     GlyphPosition glyphPosition = GlyphPosition::Before;
     bool peek = false;
     int peekDelayMs = kBarRevealDelayMs;
+    /// Optional template, e.g. "{temp} / dew {dew}". Tokens: temp feels high low dew humidity wind gust pressure
+    /// uv aqi cloud visibility rain moon condition location. Overrides show_condition / show_temperature.
+    std::string format;
   };
 
   WeatherWidget(WeatherService* weather, wl_output* output, Options options);
@@ -37,6 +40,7 @@ private:
   bool m_showCondition = true;
   bool m_showTemperature = true;
   GlyphPosition m_glyphPosition = GlyphPosition::Before;
+  std::string m_format;
   InputArea* m_area = nullptr;
   Glyph* m_glyph = nullptr;
   Label* m_label = nullptr;
