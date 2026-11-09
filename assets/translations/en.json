@@ -1395,6 +1395,7 @@
           "screen-off": "Screen Off",
           "suspend": "Suspend"
         },
+        "ignore-inhibitors-label": "Ignore inhibitors (caffeine, video playback)",
         "kind-section-label": "Action",
         "locked-timeout-label": "Timeout while locked (seconds, 0 = off)",
         "name-label": "Name",
@@ -2465,6 +2466,14 @@
             "description": "Command to run after Noctalia starts",
             "label": "On Started"
           },
+          "system-resumed": {
+            "description": "Command to run after the system wakes from suspend or hibernate",
+            "label": "On System Resumed"
+          },
+          "system-suspending": {
+            "description": "Command to run when the system is about to suspend or hibernate (best effort: it runs as sleep begins)",
+            "label": "On System Suspending"
+          },
           "theme-mode-changed": {
             "description": "Command to run when the resolved theme mode changes between light and dark",
             "label": "On Theme Mode Changed"
@@ -2484,6 +2493,10 @@
         }
       },
       "idle": {
+        "gamepad-activity": {
+          "description": "Count game controller buttons and stick movement as activity, so idle lock, screen off and suspend do not fire mid-game",
+          "label": "Controller activity"
+        },
         "behaviors": {
           "description": "Named idle actions with presets (lock, screen off, suspend) or custom commands, timeouts, resume pairing, and order",
           "label": "Behaviors"

@@ -180,6 +180,9 @@ namespace noctalia::cli {
   inline constexpr std::array kMsgPanelClosePositionals{
       Positional{"id", {}, {}, false, false, false},
   };
+  inline constexpr std::array kMsgPanelIsOpenPositionals{
+      Positional{"id", {}, {}, false, false, false},
+  };
   inline constexpr std::array kMsgPanelOpenPositionals{
       Positional{"id", {}, {}, true, false, false},
       Positional{"context", {}, {}, false, false, false},
@@ -673,6 +676,16 @@ namespace noctalia::cli {
         {},
         false
     };
+    inline constexpr Command panelIsOpen{
+        "panel-is-open",
+        "Print true or false: whether the named panel (or any panel, when no id is given) is open",
+        {},
+        {},
+        {},
+        kMsgPanelIsOpenPositionals,
+        {},
+        false
+    };
     inline constexpr Command panelOpen{
         "panel-open", "Open a panel by id, optionally with context (e.g. launcher /emo, control-center audio)",
         {},           {},
@@ -1004,6 +1017,7 @@ namespace noctalia::cli {
       msg::osdShow,
       msg::osdToggle,
       msg::panelClose,
+      msg::panelIsOpen,
       msg::panelOpen,
       msg::panelToggle,
       msg::plugin,

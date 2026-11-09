@@ -373,6 +373,7 @@ address          = ""                # e.g. "Toronto, ON"; geocoded when auto_lo
 #                             Use 0 for immediate commands with no overlay. Input during the fade cancels.
 # [idle]
 # pre_action_fade_seconds = 2.0
+# gamepad_activity = true   # game controller input counts as activity
 
 [idle.behavior.lock]
 timeout = 600
@@ -582,6 +583,8 @@ show_visualizer = true              # PipeWire audio visualizer beside the playb
 # battery_state_changed   = "notify-send 'Power' \"Battery: $NOCTALIA_BATTERY_STATE\""
 # battery_under_threshold = "notify-send 'Power' \"Battery at ${NOCTALIA_BATTERY_PERCENT}%\""
 # power_profile_changed   = "notify-send 'Power' \"Profile: $NOCTALIA_POWER_PROFILE\""
+# system_suspending       = []
+# system_resumed          = []
 # [widget.launcher]
 # custom_image = "/path/to/image.png"
 # custom_image_colorize = false

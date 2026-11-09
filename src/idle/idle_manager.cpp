@@ -254,7 +254,16 @@ void IdleManager::recreateBehaviorNotification(BehaviorState& behavior) {
     return;
   }
 
-  behavior.notification = m_wayland->createIdleNotification(timeoutMs);
+  if (behavior.config.ignoreInhibitors) {
+    // Input-only notification: the compositor ignores idle inhibitors for it (ext-idle-notify v2).
+    behavior.notification = m_wayland->createInputIdleNotification(timeoutMs);
+    if (behavior.notification == nullptr) {
+      kLog.warn("compositor lacks ext-idle-notify v2; '{}' cannot ignore inhibitors", behavior.config.name);
+    }
+  }
+  if (behavior.notification == nullptr) {
+    behavior.notification = m_wayland->createIdleNotification(timeoutMs);
+  }
   if (behavior.notification == nullptr) {
     kLog.warn("failed to re-register idle behavior '{}'", behavior.config.name);
     return;
@@ -423,7 +432,28 @@ void IdleManager::handleIdled(void* data, ext_idle_notification_v1* /*notificati
   }
 
   IdleManager& self = *behavior->owner;
-  if (self.screenSaverInhibited()) {
+  if (self.m_lastExternalActivity != std::chrono::steady_clock::time_point{}) {
+    const auto timeout = std::chrono::milliseconds(self.effectiveTimeoutMilliseconds(behavior->config));
+    const auto since = std::chrono::steady_clock::now() - self.m_lastExternalActivity;
+    if (since < timeout) {
+      behavior->deferred = true;
+      const auto remaining =
+          std::chrono::duration_cast<std::chrono::milliseconds>(timeout - since) + std::chrono::milliseconds(100);
+      kLog.info(
+          "idle behavior '{}' postponed: controller input {}s ago", behavior->config.name,
+          std::chrono::duration_cast<std::chrono::seconds>(since).count()
+      );
+      behavior->deferTimer.start(remaining, [behavior] {
+        if (!behavior->deferred) {
+          return;
+        }
+        behavior->deferred = false;
+        handleIdled(behavior, nullptr);
+      });
+      return;
+    }
+  }
+  if (self.screenSaverInhibited() && !behavior->config.ignoreInhibitors) {
     kLog.info(
         "idle behavior '{}' suppressed (screensaver inhibit locks={}{})", behavior->config.name,
         self.m_screenSaverInhibitLocks, self.m_inhibitReleasePending ? ", release pending" : ""
@@ -472,6 +502,8 @@ void IdleManager::handleIdled(void* data, ext_idle_notification_v1* /*notificati
   self.runBehavior(*behavior);
 }
 
+void IdleManager::noteExternalActivity() { m_lastExternalActivity = std::chrono::steady_clock::now(); }
+
 void IdleManager::handleResumed(void* data, ext_idle_notification_v1* /*notification*/) {
   auto* behavior = static_cast<BehaviorState*>(data);
   if (behavior == nullptr || behavior->owner == nullptr) {
@@ -479,6 +511,8 @@ void IdleManager::handleResumed(void* data, ext_idle_notification_v1* /*notifica
   }
 
   IdleManager& self = *behavior->owner;
+  behavior->deferred = false;
+  behavior->deferTimer.stop();
   if (behavior->phase == BehaviorPhase::Fading) {
     kLog.info("idle behavior '{}' pre-action fade cancelled (user active)", behavior->config.name);
     self.cancelActiveGrace(true);

@@ -797,6 +797,8 @@ void Application::initNotificationAndOsd() {
   );
   m_idleGraceOverlay.initialize(m_wayland, &m_renderContext);
   m_pluginIdleWatches.initialize(m_wayland);
+  m_gamepadMonitor.setActivityCallback([this] { m_idleManager.noteExternalActivity(); });
+  m_gamepadMonitor.setEnabled(m_configService.config().idle.gamepadActivity);
   m_wayland.setIdleCapabilitiesReadyCallback([this] {
     m_idleManager.reload(m_configService.config().idle);
     m_pluginIdleWatches.onCapabilitiesReady();
@@ -862,6 +864,7 @@ void Application::initNotificationAndOsd() {
   m_configService.addReloadCallback(
       [this] {
         if (m_configService.lastChange().idle) {
+          m_gamepadMonitor.setEnabled(m_configService.config().idle.gamepadActivity);
           m_idleManager.reload(m_configService.config().idle);
         }
       },

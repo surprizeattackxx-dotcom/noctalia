@@ -1108,6 +1108,7 @@ void Application::initSystemBusServices() {
           // fade-complete cleanup races with process freeze.
           m_idleGraceOverlay.hide();
           if (sleeping) {
+            m_hookManager.fire(HookKind::SystemSuspending);
             // Sleep-related locks must never offer passwordless unlock: revoke
             // before handling the transition so locks already pending or engaged
             // lose the window, and idempotently again after the lock armed below.
@@ -1164,6 +1165,7 @@ void Application::initSystemBusServices() {
           m_skipLockOnNextSleep = false;
           m_releaseSleepDelayWhenLocked = false;
           m_screenTimeService.setSuspendPaused(false);
+          m_hookManager.fire(HookKind::SystemResumed);
           if (m_configService.shouldLockBeforeSuspend() && m_logindService != nullptr) {
             (void)m_logindService->acquireSleepDelayInhibit();
           }

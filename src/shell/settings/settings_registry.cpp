@@ -3334,6 +3334,11 @@ namespace settings {
 
     // Idle
     entries.push_back(makeEntry(
+        SettingsSection::Power, "idle", tr("settings.schema.idle.gamepad-activity.label"),
+        tr("settings.schema.idle.gamepad-activity.description"), {"idle", "gamepad_activity"},
+        ToggleSetting{.checked = cfg.idle.gamepadActivity}, "idle gamepad controller joystick game activity"
+    ));
+    entries.push_back(makeEntry(
         SettingsSection::Power, "idle", tr("settings.schema.idle.pre-action-fade.label"),
         tr("settings.schema.idle.pre-action-fade.description"), {"idle", "pre_action_fade_seconds"},
         StepperSetting{
@@ -3376,6 +3381,8 @@ namespace settings {
       case HookKind::BatteryPlugged:
       case HookKind::BatteryPercentageChanged:
       case HookKind::PowerProfileChanged:
+      case HookKind::SystemSuspending:
+      case HookKind::SystemResumed:
         return "power";
       case HookKind::Count:
         break;
@@ -3390,6 +3397,9 @@ namespace settings {
           || kind == HookKind::BatteryPlugged
           || kind == HookKind::BatteryPercentageChanged) {
         tags += " battery power";
+      }
+      if (kind == HookKind::SystemSuspending || kind == HookKind::SystemResumed) {
+        tags += " suspend resume sleep wake wakeup hibernate";
       }
       if (kind == HookKind::PowerProfileChanged) {
         tags += " power profile performance balanced saver";

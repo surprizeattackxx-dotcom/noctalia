@@ -20,6 +20,7 @@
 #include "dbus/secret/secret_collection_probe.h"
 #include "hooks/battery_hook_state.h"
 #include "hooks/hook_manager.h"
+#include "idle/gamepad_activity.h"
 #include "idle/idle_grace_overlay.h"
 #include "idle/idle_inhibitor.h"
 #include "idle/idle_manager.h"
@@ -293,6 +294,7 @@ private:
   std::unique_ptr<DebugService> m_debugService;
   IdleInhibitor m_idleInhibitor;
   IdleManager m_idleManager;
+  GamepadActivityMonitor m_gamepadMonitor;
   PluginIdleWatches m_pluginIdleWatches;
   IdleGraceOverlay m_idleGraceOverlay;
   std::uint64_t m_idleGraceOverlayGeneration = 0;

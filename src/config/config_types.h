@@ -296,6 +296,10 @@ struct IdleBehaviorConfig {
   bool lockBeforeSuspend = true;
   /// Shorter timeout (seconds) applied only while the session is locked; 0 = always use timeoutSeconds.
   double lockedTimeoutSeconds = 0.0;
+  /// Count only real input (keyboard, pointer, touch) as activity: caffeine, video-playback inhibits and other
+  /// idle inhibitors no longer hold this behavior off. Needs ext-idle-notify v2; otherwise the behavior stays
+  /// inhibitable.
+  bool ignoreInhibitors = false;
 
   bool operator==(const IdleBehaviorConfig&) const = default;
 };
@@ -325,6 +329,8 @@ struct IdleConfig {
   /// from transparent to opaque over this many seconds, then runs `command`. Compositor activity during
   /// the fade cancels. When 0, the idle command runs immediately with no overlay.
   float preActionFadeSeconds = 2.0F;
+  /// Count game controller input (buttons, large stick moves) as activity, which the compositor ignores.
+  bool gamepadActivity = true;
 
   bool operator==(const IdleConfig&) const = default;
 };
@@ -1690,6 +1696,8 @@ enum class HookKind : std::uint8_t {
   BatteryPlugged,
   BatteryPercentageChanged,
   PowerProfileChanged,
+  SystemSuspending,
+  SystemResumed,
   Count
 };
 
@@ -1712,6 +1720,8 @@ constexpr EnumOption<HookKind> kHookKinds[] = {
     {HookKind::BatteryPlugged, "battery_plugged", ""},
     {HookKind::BatteryPercentageChanged, "battery_percentage_changed", ""},
     {HookKind::PowerProfileChanged, "power_profile_changed", ""},
+    {HookKind::SystemSuspending, "system_suspending", ""},
+    {HookKind::SystemResumed, "system_resumed", ""},
 };
 
 static_assert(sizeof(kHookKinds) / sizeof(kHookKinds[0]) == static_cast<std::size_t>(HookKind::Count));

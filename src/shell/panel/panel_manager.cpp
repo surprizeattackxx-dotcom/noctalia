@@ -3120,6 +3120,21 @@ void PanelManager::registerIpc(IpcService& ipc) {
       }
   );
 
+  ipc.bind(noctalia::cli::msg::panelIsOpen, [this, unknownPanelError](const std::string& args) -> std::string {
+    const std::string panelId = StringUtils::trim(args);
+    if (!panelId.empty() && StringUtils::splitWhitespace(panelId).size() != 1) {
+      return "error: panel-is-open accepts at most one panel id\n";
+    }
+    if (panelId.empty()) {
+      return isOpen() && !m_closing ? "true\n" : "false\n";
+    }
+    if (!m_panels.contains(panelId) && !m_persistentHost.hasPanel(panelId)) {
+      return unknownPanelError(panelId);
+    }
+    const bool open = (isOpenPanel(panelId) && !m_closing) || m_persistentHost.isOpen(panelId);
+    return open ? "true\n" : "false\n";
+  });
+
   ipc.bind(noctalia::cli::msg::panelClose, [this, unknownPanelError](const std::string& args) -> std::string {
     const std::string panelId = StringUtils::trim(args);
     if (!panelId.empty() && StringUtils::splitWhitespace(panelId).size() != 1) {
