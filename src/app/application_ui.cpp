@@ -777,6 +777,15 @@ void Application::initPanelManagerAndPanels() {
 }
 
 void Application::initNotificationAndOsd() {
+  // Replace the constructor's UI-only callback with the same UI work plus manual-DND tracking.
+  // Automatic writes record their expected value before NotificationManager calls this synchronously.
+  m_notificationManager.setStateCallback([this] {
+    m_automaticDnd.observe(m_notificationManager.doNotDisturb());
+    if (m_notificationManager.doNotDisturb()) {
+      m_notificationToast.hideDndSuppressed();
+    }
+    scheduleNotificationShellRefresh();
+  });
   m_notificationToast.initialize(
       m_wayland, m_compositorPlatform, &m_configService, &m_notificationManager, &m_renderContext, &m_httpClient
   );
@@ -804,6 +813,11 @@ void Application::initNotificationAndOsd() {
   m_windowSwitcher.initialize(
       m_wayland, &m_renderContext, m_compositorPlatform, &m_configService, &m_asyncTextureCache
   );
+  m_windowSwitcher.setSessionBus(m_bus.get());
+  // Quiet hours: the window edges only need minute accuracy, and a reload re-evaluates at once.
+  m_quietHoursTimer.startRepeating(std::chrono::seconds(20), [this] { syncQuietHours(); });
+  m_configService.addReloadCallback([this] { syncQuietHours(); });
+  syncQuietHours();
   m_configService.addReloadCallback([this] { m_windowSwitcher.onConfigReload(); });
   m_configService.addReloadCallback([this] { m_osdOverlay.onConfigReload(); });
   m_scriptApi.setShowOsdHook(
@@ -826,6 +840,9 @@ void Application::initNotificationAndOsd() {
   m_configService.addReloadCallback(
       [this] {
         m_gameMode.configure(m_configService.config().gameMode);
+        setAutomaticDoNotDisturb(
+            AutomaticDndState::Owner::GameMode, m_gameMode.active() && m_configService.config().gameMode.dnd
+        );
         FormatUnits::setTemperatureFahrenheit(m_configService.config().system.monitor.temperatureUnit == "fahrenheit");
       },
       "game_mode"
@@ -1256,11 +1273,8 @@ TimeService::Precision Application::timePrecisionNeeded() const {
 
 void Application::applyGameMode(bool active) {
   const GameModeConfig& cfg = m_configService.config().gameMode;
+  setAutomaticDoNotDisturb(AutomaticDndState::Owner::GameMode, active && cfg.dnd);
   if (active) {
-    if (cfg.dnd) {
-      m_gameModePrevDnd = m_notificationManager.doNotDisturb();
-      m_notificationManager.setDoNotDisturb(true);
-    }
     if (cfg.inhibitIdle && !m_idleInhibitor.enabled() && m_idleInhibitor.available()) {
       m_idleInhibitor.setEnabled(true);
       m_gameModeSetCaffeine = true;
@@ -1275,9 +1289,6 @@ void Application::applyGameMode(bool active) {
     }
     m_hookManager.fire(HookKind::GameModeStarted, {{"NOCTALIA_GAME_APP", m_gameMode.detectedApp()}});
   } else {
-    if (cfg.dnd) {
-      m_notificationManager.setDoNotDisturb(m_gameModePrevDnd);
-    }
     if (m_gameModeSetCaffeine) {
       m_idleInhibitor.setEnabled(false);
       m_gameModeSetCaffeine = false;

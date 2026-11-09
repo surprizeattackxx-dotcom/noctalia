@@ -929,6 +929,10 @@ struct NotificationConfig {
   bool keepDismissedInHistory = true;
   int historyRetentionHours = 0;
   int maxVisible = 0; // 0 = unlimited (space-based only)
+  // Scheduled Do Not Disturb: on at quietHoursStart, off at quietHoursEnd (HH:MM, 24-hour, local time).
+  bool quietHours = false;
+  std::string quietHoursStart = "22:00";
+  std::string quietHoursEnd = "07:00";
 
   std::vector<NotificationFilterConfig> filters;
 

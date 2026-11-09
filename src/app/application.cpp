@@ -29,6 +29,7 @@
 #include "launcher/session_provider.h"
 #include "launcher/wallpaper_provider.h"
 #include "launcher/window_provider.h"
+#include "notification/job_progress.h"
 #include "notification/notifications.h"
 #include "pipewire/pipewire_poll_source.h"
 #include "pipewire/pipewire_service.h"
@@ -138,6 +139,10 @@ Application::Application()
 }
 
 Application::~Application() {
+  // The bar is declared after the job service and would otherwise be destroyed first.
+  // Drop its singleton callback and close job notifications while all UI dependencies are still alive.
+  JobProgress::instance().setChangeCallback({});
+  m_kdeJobViewServer.reset();
   m_compositorPlatform.setOutputPowerChangeCallback({});
   ++m_outputPowerRequestGeneration;
   m_lockScreen.cancelOutputPowerOff();

@@ -67,6 +67,7 @@ private:
     std::optional<std::string> icon;
     bool iconIsAppIcon = false;
     std::optional<NotificationImageData> imageData;
+    std::optional<int> progress; // 0-100 job/transfer progress drawn as a bar under the body
     Urgency urgency = Urgency::Normal;
     NotificationDndPolicy dndPolicy = NotificationDndPolicy::Respect;
     int displayDurationMs = 0; // -1 = persistent (no auto-dismiss)
