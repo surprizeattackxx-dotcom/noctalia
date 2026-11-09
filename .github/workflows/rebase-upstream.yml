@@ -1,6 +1,6 @@
 name: rebase-upstream
-# Weekly: when upstream tags a newer release, replay the kde commits on top of it.
-# Clean replay -> pushes branch kde-rebase-<tag> (the build-kde workflow then checks it compiles).
+# Weekly: when upstream main has moved past .kde-base, replay the kde commits on top of it.
+# Clean replay -> pushes branch kde-rebase-<short sha> (the build-kde workflow then checks it compiles).
 # Conflict -> opens an issue so a human ports the patch.
 on:
   schedule: [{cron: '0 7 * * 1'}]
@@ -19,17 +19,18 @@ jobs:
         run: |
           git config user.name "kde-rebase-bot"; git config user.email "actions@users.noreply.github.com"
           git remote add upstream https://github.com/noctalia-dev/noctalia.git
-          git fetch --tags --force upstream
+          git fetch --force upstream main
           base=$(cat .kde-base)
-          latest=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1)
-          if [ "$latest" = "$base" ] || [ -z "$latest" ]; then echo "up to date at $base"; exit 0; fi
-          if git ls-remote --exit-code --heads origin "kde-rebase-$latest" >/dev/null 2>&1; then echo "already proposed"; exit 0; fi
-          git checkout -q -b "kde-rebase-$latest"
-          if git rebase --onto "$latest" "$base" "kde-rebase-$latest"; then
-            echo "$latest" > .kde-base; git add .kde-base; git commit -qm "kde: base is now $latest"
-            git push origin "kde-rebase-$latest"
+          latest=$(git rev-parse upstream/main)
+          short=$(git rev-parse --short "$latest")
+          if [ "$latest" = "$base" ]; then echo "up to date at $base"; exit 0; fi
+          if git ls-remote --exit-code --heads origin "kde-rebase-$short" >/dev/null 2>&1; then echo "already proposed"; exit 0; fi
+          git checkout -q -b "kde-rebase-$short"
+          if git rebase --onto "$latest" "$base" "kde-rebase-$short"; then
+            echo "$latest" > .kde-base; git add .kde-base; git commit -qm "kde: base is now $short"
+            git push origin "kde-rebase-$short"
           else
             git rebase --abort
-            gh issue create --title "kde patches do not apply to $latest" \
-              --body "Rebasing kde onto $latest conflicted. Port the commits by hand."
+            gh issue create --title "kde patches do not apply to upstream $short" \
+              --body "Rebasing kde onto upstream main ($short) conflicted. Port the commits by hand."
           fi
