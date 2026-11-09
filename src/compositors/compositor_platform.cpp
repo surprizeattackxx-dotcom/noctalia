@@ -675,6 +675,10 @@ void CompositorPlatform::startKdeActiveWindow(SessionBus& bus) {
   m_kwinActiveWindow->start();
 }
 
+SessionBus* CompositorPlatform::kdeSessionBus() const noexcept {
+  return m_kwinActiveWindow ? &m_kwinActiveWindow->sessionBus() : nullptr;
+}
+
 void CompositorPlatform::initialize() {
   if (m_initialized) {
     return;

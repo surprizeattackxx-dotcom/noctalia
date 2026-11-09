@@ -54,6 +54,7 @@ namespace compositors::kde {
     void moveWindowToDesktop(const std::string& uuid, int desktopIndex);
     void moveWindowToOutput(const std::string& uuid, const std::string& outputName);
     [[nodiscard]] bool isAvailable() const noexcept { return m_scriptInstalled; }
+    SessionBus& sessionBus() noexcept { return m_bus; }
 
   private:
     struct TrackedWindow {
