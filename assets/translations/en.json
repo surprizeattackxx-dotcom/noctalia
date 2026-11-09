@@ -190,15 +190,22 @@
         "no-location": "No location",
         "off": "Weather off",
         "tooltip": {
+          "air-quality": "Air quality",
+          "cloud-cover": "Cloud cover",
           "condition": "Condition",
+          "dew-point": "Dew point",
           "feels-like": "Feels Like",
+          "gusts": "Gusts",
           "high": "High",
           "humidity": "Humidity",
           "low": "Low",
+          "pressure": "Pressure",
+          "rain-chance": "Rain chance",
           "sunrise": "Sunrise",
           "sunset": "Sunset",
           "temperature": "Temperature",
           "uv": "UV Index",
+          "visibility": "Visibility",
           "wind": "Wind"
         }
       }
@@ -554,14 +561,25 @@
       },
       "data-unavailable": "Weather data unavailable",
       "details": {
+        "air-quality": "Air Quality",
+        "cloud-cover": "Cloud Cover",
+        "daylight": "Daylight",
+        "dew-point": "Dew Point",
         "elevation": "Elevation",
         "feels-like": "Feels Like",
+        "gusts": "Wind Gusts",
+        "humidity": "Humidity",
+        "moon": "Moon",
+        "peak": "peak",
+        "pressure": "Pressure",
+        "rain-chance": "Rain Chance",
         "sunrise": "Sunrise",
         "sunset": "Sunset",
         "temp-max": "Temperature Max",
         "temp-min": "Temperature Min",
         "timezone": "Timezone",
         "uv-index": "UV Index",
+        "visibility": "Visibility",
         "wind": "Wind"
       },
       "disabled": "Enable [weather] in config.toml",
@@ -1773,6 +1791,25 @@
         "unit": {
           "imperial": "Imperial",
           "metric": "Metric"
+        },
+        "temperature": {
+          "": "Follow Units",
+          "c": "Celsius",
+          "f": "Fahrenheit"
+        },
+        "wind": {
+          "": "Follow Units",
+          "kmh": "km/h",
+          "kn": "Knots",
+          "mph": "mph",
+          "ms": "m/s"
+        },
+        "pressure": {
+          "": "Follow Units",
+          "hpa": "hPa",
+          "inhg": "inHg",
+          "kpa": "kPa",
+          "mmhg": "mmHg"
         }
       }
     },
@@ -3275,17 +3312,33 @@
           "description": "Enable the weather service via open-meteo.com",
           "label": "Weather"
         },
+        "weather-air-quality": {
+          "description": "Show the air quality index, fetched from Open-Meteo's air quality service",
+          "label": "Air quality"
+        },
         "weather-effects": {
           "description": "Show visual weather effects",
           "label": "Weather Effects"
+        },
+        "weather-pressure-unit": {
+          "description": "Air pressure unit; follows Units unless set",
+          "label": "Pressure"
         },
         "weather-refresh-interval": {
           "description": "How often to refresh weather data (minutes)",
           "label": "Refresh Interval"
         },
+        "weather-temperature-unit": {
+          "description": "Temperature unit; follows Units unless set",
+          "label": "Temperature"
+        },
         "weather-unit": {
           "description": "Unit system for weather display",
           "label": "Units"
+        },
+        "weather-wind-unit": {
+          "description": "Wind speed unit; follows Units unless set",
+          "label": "Wind speed"
         }
       },
       "shared": {
@@ -5353,6 +5406,21 @@
     }
   },
   "weather": {
+    "aqi": {
+      "good": "Good",
+      "hazardous": "Hazardous",
+      "moderate": "Moderate",
+      "unhealthy": "Unhealthy",
+      "unhealthy-sensitive": "Unhealthy for sensitive groups",
+      "very-unhealthy": "Very unhealthy"
+    },
+    "comfort": {
+      "comfortable": "Comfortable",
+      "dry": "Dry",
+      "humid": "Humid",
+      "muggy": "Muggy",
+      "oppressive": "Oppressive"
+    },
     "conditions": {
       "full": {
         "clear-sky": "Clear sky",
@@ -5384,6 +5452,16 @@
     "errors": {
       "fetch-failed": "Weather fetch failed",
       "parse-weather": "Could not parse weather response"
+    },
+    "moon": {
+      "first-quarter": "First Quarter",
+      "full": "Full Moon",
+      "last-quarter": "Last Quarter",
+      "new": "New Moon",
+      "waning-crescent": "Waning Crescent",
+      "waning-gibbous": "Waning Gibbous",
+      "waxing-crescent": "Waxing Crescent",
+      "waxing-gibbous": "Waxing Gibbous"
     }
   },
   "window-switcher": {

@@ -11,7 +11,15 @@ enabled         = true
 refresh_minutes = 30
 unit            = "metric"      # metric | imperial
 effects         = true          # visual weather effects
+temperature_unit = ""           # "" follows unit | c | f
+wind_unit        = ""           # "" follows unit | kmh | mph | ms | kn
+pressure_unit    = ""           # "" follows unit | hpa | inhg | mmhg | kpa
+air_quality      = true         # fetch the US air quality index
 ```
+
+`unit` picks a metric or imperial default for everything. `temperature_unit`, `wind_unit` and `pressure_unit` override one quantity, so Celsius with mph (the UK mix) is `unit = "metric"` with `wind_unit = "mph"`. Visibility, rain amount and elevation follow `unit`.
+
+Besides temperature, wind and UV, the Weather tab shows dew point (with a comfort label: Dry, Comfortable, Humid, Muggy, Oppressive), humidity, sea-level pressure, today's rain chance and amount, air quality (US AQI), daylight length, cloud cover, visibility, moon phase and wind gusts. The details list scrolls. `air_quality` makes a second request to Open-Meteo's air quality endpoint with the same coordinates; turn it off to skip it. The bar [`weather` widget](/noctalia/bar/widgets/weather/) can show any of these through its `format` option.
 
 Weather consumes the coordinates resolved by [`[location]`](/noctalia/services/location/) - set `auto_locate` or `address` there. When a location is available, Noctalia fetches current weather plus a 6-day forecast. Configure under **Settings → Location → Weather**.
 

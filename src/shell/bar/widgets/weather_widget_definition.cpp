@@ -19,6 +19,9 @@ const noctalia::bar::WidgetDefinition<WeatherWidget::Options>& weatherWidgetDefi
           field<&Options::showTemperature>({
               .key = "show_temperature",
           }),
+          field<&Options::format>({
+              .key = "format",
+          }),
       },
   };
   return definition;

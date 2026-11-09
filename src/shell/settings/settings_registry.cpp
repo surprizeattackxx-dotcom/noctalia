@@ -2942,6 +2942,64 @@ namespace settings {
     }
     {
       auto e = makeEntry(
+          SettingsSection::Location, "weather", tr("settings.schema.services.weather-temperature-unit.label"),
+          tr("settings.schema.services.weather-temperature-unit.description"), {"weather", "temperature_unit"},
+          plainSelect(
+              {{"", "settings.options.weather.temperature."},
+               {"c", "settings.options.weather.temperature.c"},
+               {"f", "settings.options.weather.temperature.f"}},
+              cfg.weather.temperatureUnit
+          ),
+          "temperature celsius fahrenheit units"
+      );
+      e.visibleWhen = weatherOn;
+      entries.push_back(std::move(e));
+    }
+    {
+      auto e = makeEntry(
+          SettingsSection::Location, "weather", tr("settings.schema.services.weather-wind-unit.label"),
+          tr("settings.schema.services.weather-wind-unit.description"), {"weather", "wind_unit"},
+          plainSelect(
+              {{"", "settings.options.weather.wind."},
+               {"kmh", "settings.options.weather.wind.kmh"},
+               {"mph", "settings.options.weather.wind.mph"},
+               {"ms", "settings.options.weather.wind.ms"},
+               {"kn", "settings.options.weather.wind.kn"}},
+              cfg.weather.windUnit
+          ),
+          "wind speed units mph kmh knots"
+      );
+      e.visibleWhen = weatherOn;
+      entries.push_back(std::move(e));
+    }
+    {
+      auto e = makeEntry(
+          SettingsSection::Location, "weather", tr("settings.schema.services.weather-pressure-unit.label"),
+          tr("settings.schema.services.weather-pressure-unit.description"), {"weather", "pressure_unit"},
+          plainSelect(
+              {{"", "settings.options.weather.pressure."},
+               {"hpa", "settings.options.weather.pressure.hpa"},
+               {"inhg", "settings.options.weather.pressure.inhg"},
+               {"mmhg", "settings.options.weather.pressure.mmhg"},
+               {"kpa", "settings.options.weather.pressure.kpa"}},
+              cfg.weather.pressureUnit
+          ),
+          "pressure barometer units hpa inhg"
+      );
+      e.visibleWhen = weatherOn;
+      entries.push_back(std::move(e));
+    }
+    {
+      auto e = makeEntry(
+          SettingsSection::Location, "weather", tr("settings.schema.services.weather-air-quality.label"),
+          tr("settings.schema.services.weather-air-quality.description"), {"weather", "air_quality"},
+          ToggleSetting{cfg.weather.airQuality}, "air quality aqi pollution"
+      );
+      e.visibleWhen = weatherOn;
+      entries.push_back(std::move(e));
+    }
+    {
+      auto e = makeEntry(
           SettingsSection::Location, "weather", tr("settings.schema.services.weather-effects.label"),
           tr("settings.schema.services.weather-effects.description"), {"weather", "effects"},
           ToggleSetting{cfg.weather.effects}, "forecast visuals"

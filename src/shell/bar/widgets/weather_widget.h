@@ -18,6 +18,9 @@ public:
     int maxWidth = 160;
     bool showCondition = true;
     bool showTemperature = true;
+    /// Optional template, e.g. "{temp} / dew {dew}". Tokens: temp feels high low dew humidity wind gust pressure
+    /// uv aqi cloud visibility rain moon condition location. Overrides show_condition / show_temperature.
+    std::string format;
   };
 
   WeatherWidget(WeatherService* weather, wl_output* output, Options options);
@@ -33,6 +36,7 @@ private:
   float m_maxWidth = 160.0F;
   bool m_showCondition = true;
   bool m_showTemperature = true;
+  std::string m_format;
   InputArea* m_area = nullptr;
   Glyph* m_glyph = nullptr;
   Label* m_label = nullptr;

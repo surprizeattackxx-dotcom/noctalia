@@ -1416,6 +1416,13 @@ struct WeatherConfig {
   bool effects = true;
   std::int32_t refreshMinutes = 30;
   std::string unit = "metric";
+  /// Per-quantity overrides of `unit` ("" follows it). temperature_unit: c|f. wind_unit: kmh|mph|ms|kn.
+  /// pressure_unit: hpa|inhg|mmhg|kpa.
+  std::string temperatureUnit;
+  std::string windUnit;
+  std::string pressureUnit;
+  /// Fetch the air quality index (separate Open-Meteo endpoint, same coordinates).
+  bool airQuality = true;
 
   bool operator==(const WeatherConfig&) const = default;
 };

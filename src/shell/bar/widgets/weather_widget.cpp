@@ -12,24 +12,102 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <format>
 #include <memory>
+#include <optional>
+#include <string>
 
 namespace {
 
-  std::string windDirectionLabel(int degrees) {
-    static constexpr std::array<const char*, 8> kDirs = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
-    const int normalized = ((degrees % 360) + 360) % 360;
-    const int index = static_cast<int>(std::lround(normalized / 45.0)) % 8;
-    return kDirs[static_cast<std::size_t>(index)];
+  std::string windDirectionLabel(int degrees) { return WeatherService::compassLabel(degrees); }
+
+  // Expands {token} placeholders from the current snapshot. Unknown tokens are left as written so a typo
+  // is visible in the bar instead of silently vanishing; unavailable values read "--".
+  std::string expandFormat(const std::string& format, const WeatherService& weather) {
+    const auto& snapshot = weather.snapshot();
+    const auto& cur = snapshot.current;
+    const auto today = snapshot.forecastDays.empty() ? nullptr : &snapshot.forecastDays.front();
+    const auto value = [&](const std::string& token) -> std::optional<std::string> {
+      if (token == "temp") {
+        return weather.formatTemperature(cur.temperatureC);
+      }
+      if (token == "feels") {
+        return cur.apparentTemperatureC ? weather.formatTemperature(*cur.apparentTemperatureC) : "--";
+      }
+      if (token == "high") {
+        return today != nullptr ? weather.formatTemperature(today->temperatureMaxC) : "--";
+      }
+      if (token == "low") {
+        return today != nullptr ? weather.formatTemperature(today->temperatureMinC) : "--";
+      }
+      if (token == "dew") {
+        return cur.dewPointC ? weather.formatTemperature(*cur.dewPointC) : "--";
+      }
+      if (token == "humidity") {
+        return std::format("{}%", cur.relativeHumidityPercent);
+      }
+      if (token == "wind") {
+        return std::format("{} {}", weather.formatWind(cur.windSpeedKmh), windDirectionLabel(cur.windDirectionDeg));
+      }
+      if (token == "gust") {
+        return cur.windGustKmh ? weather.formatWind(*cur.windGustKmh) : "--";
+      }
+      if (token == "pressure") {
+        return cur.pressureHpa ? weather.formatPressure(*cur.pressureHpa) : "--";
+      }
+      if (token == "uv") {
+        return std::format("{:.1F}", cur.uvIndex);
+      }
+      if (token == "aqi") {
+        return snapshot.airQuality.valid ? std::to_string(snapshot.airQuality.usAqi) : "--";
+      }
+      if (token == "cloud") {
+        return cur.cloudCoverPercent >= 0 ? std::format("{}%", cur.cloudCoverPercent) : "--";
+      }
+      if (token == "visibility") {
+        return cur.visibilityM ? weather.formatVisibility(*cur.visibilityM) : "--";
+      }
+      if (token == "rain") {
+        return today != nullptr && today->precipitationProbabilityMaxPercent >= 0
+            ? std::format("{}%", today->precipitationProbabilityMaxPercent)
+            : "--";
+      }
+      if (token == "moon") {
+        return WeatherService::moonPhase(std::chrono::system_clock::now()).name;
+      }
+      if (token == "condition") {
+        return WeatherService::shortDescriptionForCode(cur.weatherCode);
+      }
+      if (token == "location") {
+        return snapshot.locationName;
+      }
+      return std::nullopt;
+    };
+
+    std::string out;
+    for (std::size_t i = 0; i < format.size(); ++i) {
+      if (format[i] == '{') {
+        if (const auto close = format.find('}', i); close != std::string::npos) {
+          const std::string token = format.substr(i + 1, close - i - 1);
+          if (const auto expanded = value(token); expanded.has_value()) {
+            out += *expanded;
+            i = close;
+            continue;
+          }
+        }
+      }
+      out += format[i];
+    }
+    return out;
   }
 
 } // namespace
 
 WeatherWidget::WeatherWidget(WeatherService* weather, wl_output* /*output*/, Options options)
     : m_weather(weather), m_maxWidth(static_cast<float>(options.maxWidth)), m_showCondition(options.showCondition),
-      m_showTemperature(options.showTemperature) {}
+      m_showTemperature(options.showTemperature), m_format(std::move(options.format)) {}
 
 void WeatherWidget::create() {
   auto area = ui::inputArea({});
@@ -113,7 +191,9 @@ void WeatherWidget::sync(Renderer& renderer) {
     glyph = WeatherService::glyphForCode(snapshot.current.weatherCode, snapshot.current.isDay);
     const int temp = static_cast<int>(std::lround(m_weather->displayTemperature(snapshot.current.temperatureC)));
     const std::string unit = m_weather->displayTemperatureUnit();
-    if (m_showTemperature) {
+    if (!m_format.empty() && !m_isVertical) {
+      text = expandFormat(m_format, *m_weather);
+    } else if (m_showTemperature) {
       if (m_isVertical) {
         text = verticalTemperature(temp);
       } else {
@@ -122,7 +202,7 @@ void WeatherWidget::sync(Renderer& renderer) {
     } else {
       text.clear();
     }
-    if (m_showCondition && !m_isVertical) {
+    if (m_format.empty() && m_showCondition && !m_isVertical) {
       text += text.empty() ? "" : " ";
       text += WeatherService::shortDescriptionForCode(snapshot.current.weatherCode);
     }
@@ -164,13 +244,10 @@ void WeatherWidget::sync(Renderer& renderer) {
   }
 
   const auto& snapshot = m_weather->snapshot();
-  const bool imperial = m_weather->useImperial();
   const char* tempUnit = m_weather->displayTemperatureUnit();
-  const std::string windUnit = imperial ? "mph" : "km/h";
 
   const int currentTemp = static_cast<int>(std::lround(m_weather->displayTemperature(snapshot.current.temperatureC)));
   const auto& apparentTemp = snapshot.current.apparentTemperatureC;
-  const double displayWind = imperial ? snapshot.current.windSpeedKmh * 0.621371 : snapshot.current.windSpeedKmh;
 
   std::vector<TooltipRow> rows;
   rows.push_back(
@@ -193,17 +270,58 @@ void WeatherWidget::sync(Renderer& renderer) {
     rows.push_back({i18n::tr("bar.widgets.weather.tooltip.high"), std::format("{}{}", high, tempUnit)});
   }
 
+  if (snapshot.current.dewPointC.has_value()) {
+    rows.push_back(
+        {i18n::tr("bar.widgets.weather.tooltip.dew-point"),
+         std::format(
+             "{} ({})", m_weather->formatTemperature(*snapshot.current.dewPointC),
+             WeatherService::dewPointComfort(*snapshot.current.dewPointC)
+         )}
+    );
+  }
   rows.push_back(
       {i18n::tr("bar.widgets.weather.tooltip.humidity"), std::format("{}%", snapshot.current.relativeHumidityPercent)}
   );
   rows.push_back(
       {i18n::tr("bar.widgets.weather.tooltip.wind"),
        std::format(
-           "{} {} {}", static_cast<int>(std::lround(displayWind)), windUnit,
+           "{} {}", m_weather->formatWind(snapshot.current.windSpeedKmh),
            windDirectionLabel(snapshot.current.windDirectionDeg)
        )}
   );
+  if (snapshot.current.windGustKmh.has_value()) {
+    rows.push_back(
+        {i18n::tr("bar.widgets.weather.tooltip.gusts"), m_weather->formatWind(*snapshot.current.windGustKmh)}
+    );
+  }
+  if (snapshot.current.pressureHpa.has_value()) {
+    rows.push_back(
+        {i18n::tr("bar.widgets.weather.tooltip.pressure"), m_weather->formatPressure(*snapshot.current.pressureHpa)}
+    );
+  }
+  if (snapshot.current.cloudCoverPercent >= 0) {
+    rows.push_back(
+        {i18n::tr("bar.widgets.weather.tooltip.cloud-cover"), std::format("{}%", snapshot.current.cloudCoverPercent)}
+    );
+  }
+  if (snapshot.current.visibilityM.has_value()) {
+    rows.push_back(
+        {i18n::tr("bar.widgets.weather.tooltip.visibility"), m_weather->formatVisibility(*snapshot.current.visibilityM)}
+    );
+  }
+  if (!snapshot.forecastDays.empty() && snapshot.forecastDays.front().precipitationProbabilityMaxPercent >= 0) {
+    rows.push_back(
+        {i18n::tr("bar.widgets.weather.tooltip.rain-chance"),
+         std::format("{}%", snapshot.forecastDays.front().precipitationProbabilityMaxPercent)}
+    );
+  }
   rows.push_back({i18n::tr("bar.widgets.weather.tooltip.uv"), std::format("{:.1F}", snapshot.current.uvIndex)});
+  if (snapshot.airQuality.valid) {
+    rows.push_back(
+        {i18n::tr("bar.widgets.weather.tooltip.air-quality"),
+         std::format("{} ({})", snapshot.airQuality.usAqi, WeatherService::airQualityLabel(snapshot.airQuality.usAqi))}
+    );
+  }
 
   if (!snapshot.forecastDays.empty()) {
     const auto& today = snapshot.forecastDays.front();

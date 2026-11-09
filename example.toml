@@ -310,6 +310,10 @@ enabled         = false
 refresh_minutes = 30
 unit            = "celsius"         # celsius | fahrenheit
 effects         = true              # visual weather effects
+# temperature_unit = ""             # "" follows unit | c | f
+# wind_unit        = ""             # "" follows unit | kmh | mph | ms | kn
+# pressure_unit    = ""             # "" follows unit | hpa | inhg | mmhg | kpa
+# air_quality      = true           # US AQI via Open-Meteo air quality
 # Weather uses the coordinates resolved by [location] (see below).
 
 # ── Audio ─────────────────────────────────────────────────────────────────────

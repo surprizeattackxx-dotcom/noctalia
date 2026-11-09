@@ -1885,12 +1885,7 @@ void LockSurface::syncRegularExtras(Renderer& renderer) {
         glyphName = WeatherService::glyphForCode(snapshot.current.weatherCode, snapshot.current.isDay);
         const int temp = static_cast<int>(std::lround(m_weather->displayTemperature(snapshot.current.temperatureC)));
         tempText = std::format("{}{}", temp, m_weather->displayTemperatureUnit());
-        const bool imperial = m_weather->useImperial();
-        const double wind = imperial ? snapshot.current.windSpeedKmh * 0.621371 : snapshot.current.windSpeedKmh;
-        const char* windUnit = imperial
-            ? "mph"
-            : (snapshot.currentUnits.windSpeed.empty() ? "km/h" : snapshot.currentUnits.windSpeed.c_str());
-        metaText = std::format("{} {}", static_cast<int>(std::lround(wind)), windUnit);
+        metaText = m_weather->formatWind(snapshot.current.windSpeedKmh);
         const bool showLocation = m_config == nullptr || m_config->config().shell.showLocation;
         if (showLocation && !snapshot.locationName.empty()) {
           metaText = std::format("{} · {}", metaText, snapshot.locationName);

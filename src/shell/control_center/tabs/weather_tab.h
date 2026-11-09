@@ -9,6 +9,7 @@
 
 class EffectNode;
 class Flex;
+class ScrollView;
 class Glyph;
 class InputArea;
 class Label;
@@ -81,6 +82,9 @@ private:
   Label* m_timeZoneLabel = nullptr;
   Flex* m_timeZoneRow = nullptr;
   Label* m_uvIndexLabel = nullptr;
+  ScrollView* m_detailsScroll = nullptr;
+  // dew point, humidity, pressure, cloud cover, visibility, rain chance, air quality, moon, daylight, gusts
+  std::array<Label*, 10> m_extraLabels{};
   std::array<Flex*, kForecastRowCount> m_forecastRows{};
   std::array<Separator*, kForecastRowCount - 1> m_forecastSeparators{};
   std::array<Flex*, kForecastRowCount> m_forecastIconSlots{};
