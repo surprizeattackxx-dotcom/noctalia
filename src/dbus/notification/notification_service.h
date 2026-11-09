@@ -31,6 +31,8 @@ namespace notification_dbus {
   bool notifyIconIsAppIcon(const std::string& appIcon, const std::map<std::string, sdbus::Variant>& hints);
   std::optional<std::string> notifyCategoryFromHints(const std::map<std::string, sdbus::Variant>& hints);
   std::optional<std::string> notifyDesktopEntryFromHints(const std::map<std::string, sdbus::Variant>& hints);
+  /// The `value` hint (0-100) that notify-send -h int:value:N and many apps use for progress notifications.
+  std::optional<int> notifyProgressFromHints(const std::map<std::string, sdbus::Variant>& hints);
 
   uint32_t ingestNotify(
       NotificationManager& manager, const std::string& app_name, uint32_t replaces_id, const std::string& app_icon,

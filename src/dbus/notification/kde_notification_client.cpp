@@ -156,6 +156,7 @@ void KdeNotificationClient::onWatcherNotify(
           .imageData = notification_dbus::notifyImageDataFromHints(hints),
           .category = notification_dbus::notifyCategoryFromHints(hints),
           .desktopEntry = notification_dbus::notifyDesktopEntryFromHints(hints),
+          .progress = notification_dbus::notifyProgressFromHints(hints),
       }
   );
 }

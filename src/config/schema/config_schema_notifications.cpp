@@ -133,6 +133,9 @@ namespace noctalia::config::schema {
         field(&NotificationConfig::collapseOnDismiss, "collapse_on_dismiss"),
         field(&NotificationConfig::keepDismissedInHistory, "keep_dismissed_in_history"),
         field(&NotificationConfig::historyRetentionHours, "history_retention_hours", Range<std::int64_t>{0, 8760}),
+        field(&NotificationConfig::quietHours, "quiet_hours"),
+        field(&NotificationConfig::quietHoursStart, "quiet_hours_start"),
+        field(&NotificationConfig::quietHoursEnd, "quiet_hours_end"),
         field(&NotificationConfig::maxVisible, "max_visible", Range<std::int64_t>{0, 20}),
         custom<NotificationConfig>(
             "blacklist",

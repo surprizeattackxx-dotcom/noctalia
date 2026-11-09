@@ -16,6 +16,7 @@
 #include "shell/bar/widgets/clock_widget_definition.h"
 #include "shell/bar/widgets/control_center_widget_definition.h"
 #include "shell/bar/widgets/custom_button_widget_definition.h"
+#include "shell/bar/widgets/job_progress_widget_definition.h"
 #include "shell/bar/widgets/keyboard_layout_widget_definition.h"
 #include "shell/bar/widgets/launcher_widget_definition.h"
 #include "shell/bar/widgets/lock_keys_widget_definition.h"
@@ -155,6 +156,7 @@ namespace settings {
         projectWidgetDefinition<nightlightWidgetDefinition>(),
         projectWidgetDefinition<notificationWidgetDefinition>(),
         projectWidgetDefinition<powerProfileWidgetDefinition>(),
+        projectWidgetDefinition<jobProgressWidgetDefinition>(),
         projectWidgetDefinition<privacyWidgetDefinition>(),
         projectWidgetDefinition<screenshotWidgetDefinition>(),
         projectWidgetDefinition<sessionWidgetDefinition>(),
@@ -245,6 +247,7 @@ namespace settings {
         {.type = "nightlight", .labelKey = "settings.widgets.types.nightlight", .glyph = "nightlight-off"},
         {.type = "notifications", .labelKey = "settings.widgets.types.notifications", .glyph = "bell"},
         {.type = "power_profile", .labelKey = "settings.widgets.types.power-profile", .glyph = "balanced"},
+        {.type = "job_progress", .labelKey = "settings.widgets.types.job-progress", .glyph = "download"},
         {.type = "privacy", .labelKey = "settings.widgets.types.privacy", .glyph = "shield-lock"},
         {.type = "screenshot", .labelKey = "settings.widgets.types.screenshot", .glyph = "screenshot"},
         {.type = "session", .labelKey = "settings.widgets.types.session", .glyph = "shutdown"},
