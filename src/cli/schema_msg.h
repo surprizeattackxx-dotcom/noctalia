@@ -577,6 +577,9 @@ namespace noctalia::cli {
     inline constexpr Command keyboardLayoutCycle{
         "keyboard-layout-cycle", "Switch to the next keyboard layout", {}, {}, {}, {}, {}, false
     };
+    inline constexpr Command launcherClearRecent{
+        "launcher-clear-recent", "Forget the launcher's recently opened apps", {}, {}, {}, {}, {}, false
+    };
     inline constexpr Command lockscreenWidgetsEdit{
         "lockscreen-widgets-edit", "Open the lockscreen widgets editor", {}, {}, {}, {}, {}, false
     };
@@ -1019,6 +1022,7 @@ namespace noctalia::cli {
       msg::keyboardBacklightToggle,
       msg::keyboardBacklightUp,
       msg::keyboardLayoutCycle,
+      msg::launcherClearRecent,
       msg::lockscreenWidgetsEdit,
       msg::lockscreenWidgetsExit,
       msg::lockscreenWidgetsToggleEdit,

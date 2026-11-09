@@ -1638,6 +1638,24 @@ void LauncherPanel::create() {
             .gap = Style::spaceXs * scale,
         },
         ui::button({
+            .out = &m_launcherClearRecentsButton,
+            .glyph = "refresh",
+            .glyphSize = Style::fontSizeBody * scale,
+            .variant = ButtonVariant::Ghost,
+            .surfaceOpacity = panelCardOpacity(),
+            .tooltip = i18n::tr("launcher.browser.options.clear-recent"),
+            .radius = Style::scaledRadiusMd(scale),
+            .width = Style::controlHeightSm * scale,
+            .visible = false,
+            .participatesInLayout = false,
+            .onClick = [this] { clearRecentlyUsed(); },
+            .configure =
+                [scale](Button& button) {
+                  button.setControlHeight(Style::controlHeightSm * scale);
+                  button.inputArea()->setTabFocusKey("launcher.clear-recent");
+                },
+        }),
+        ui::button({
             .out = &m_launcherUsageButton,
             .glyph = m_config != nullptr && m_config->config().shell.launcher.sortByUsage ? "sort-ascending-letters"
                                                                                           : "sort-descending-small-big",
@@ -2225,6 +2243,7 @@ void LauncherPanel::onPanelCardOpacityChanged(float opacity) {
     m_launcherSections->notifyDataChanged();
   }
   for (Button* button : {
+           m_launcherClearRecentsButton,
            m_launcherUsageButton,
            m_launcherGridButton,
            m_launcherSettingsButton,
@@ -2467,6 +2486,7 @@ void LauncherPanel::onClose() {
   m_launcherAvatar = nullptr;
   m_launcherAvatarFallback = nullptr;
   m_launcherSettingsButton = nullptr;
+  m_launcherClearRecentsButton = nullptr;
   m_launcherUsageButton = nullptr;
   m_launcherGridButton = nullptr;
   m_launcherPowerButton = nullptr;
@@ -2487,6 +2507,14 @@ void LauncherPanel::clearUsage() {
   if (m_input != nullptr) {
     reapplyCurrentQuery();
   }
+}
+
+void LauncherPanel::clearRecentlyUsed() {
+  m_usageTracker.clearRecentlyUsed();
+  if (m_input != nullptr) {
+    reapplyCurrentQuery();
+  }
+  PanelManager::instance().requestLayout();
 }
 
 void LauncherPanel::syncUsageOrderingState() {
@@ -3225,6 +3253,13 @@ void LauncherPanel::updateLauncherOptionButtons() {
     return;
   }
   const auto& launcher = m_config->config().shell.launcher;
+  if (m_launcherClearRecentsButton != nullptr) {
+    const bool available = launcher.trackUsage && m_hasRecentlyUsed;
+    m_launcherClearRecentsButton->setVisible(available);
+    m_launcherClearRecentsButton->setParticipatesInLayout(available);
+    m_launcherClearRecentsButton->setEnabled(available);
+    m_launcherClearRecentsButton->setSelected(false);
+  }
   if (m_launcherUsageButton != nullptr) {
     const bool orderingAvailable = launcher.trackUsage
         && !m_showingProviderOverview
