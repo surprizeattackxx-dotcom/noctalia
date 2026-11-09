@@ -240,6 +240,10 @@ namespace {
     }
 
     const auto active = platform.activeToplevel();
+    if (active.has_value() && active->handle == nullptr && !active->identifier.empty()) {
+      // KDE reports the active window through the KWin bridge: an identifier but no wlr handle.
+      return canonicalWindowId(active->identifier);
+    }
     if (!active.has_value() || active->handle == nullptr) {
       return {};
     }
@@ -619,6 +623,9 @@ namespace {
     if (token == "current") {
       return WindowSwitcherScope::Current;
     }
+    if (token == "app") {
+      return WindowSwitcherScope::App;
+    }
     return std::nullopt;
   }
 
@@ -715,6 +722,9 @@ void WindowSwitcher::registerIpc(IpcService& ipc) {
       return "error: no output available\n";
     }
     m_scopeOverride = scope.value_or(WindowSwitcherScope::None);
+    if (!m_active) {
+      m_appScopeAppId.clear();
+    }
     const bool wasActive = m_active;
     std::uint32_t modifiers = m_active && m_wayland != nullptr ? m_wayland->keyboardModifiers() : 0;
     if (reverse) {
@@ -874,6 +884,7 @@ void WindowSwitcher::hide() {
   m_windows.clear();
   m_selectedIndex = 0;
   m_scopeOverride = WindowSwitcherScope::None;
+  m_appScopeAppId.clear();
   cancelShortcutModifierReleaseCheck();
   m_shortcutState.reset();
   ++m_shortcutSessionGeneration;
@@ -930,6 +941,10 @@ void WindowSwitcher::refreshWindows() {
     allOutputs = false;
     currentWorkspaceOnly = true;
     break;
+  case WindowSwitcherScope::App:
+    allOutputs = true;
+    currentWorkspaceOnly = false;
+    break;
   case WindowSwitcherScope::None:
     break;
   }
@@ -937,6 +952,22 @@ void WindowSwitcher::refreshWindows() {
       *m_platform, *m_wayland, m_iconResolver, iconSize, allOutputs ? nullptr : m_output, m_windows,
       currentFocusedWindowKey(*m_platform), mruEnabled() ? &m_mruKeys : nullptr, currentWorkspaceOnly
   );
+
+  if (m_scopeOverride == WindowSwitcherScope::App && !m_windows.empty()) {
+    // The focused window is sorted first. Remember its app so later refreshes keep the same filter.
+    if (m_appScopeAppId.empty()) {
+      if (const auto active = m_platform->activeToplevel(); active.has_value() && !active->appId.empty()) {
+        m_appScopeAppId = StringUtils::toLower(active->appId);
+      } else if (identityKeysEqual(identityKeyForEntry(m_windows.front()), currentFocusedWindowKey(*m_platform))) {
+        m_appScopeAppId = StringUtils::toLower(m_windows.front().appId);
+      }
+    }
+    if (!m_appScopeAppId.empty()) {
+      std::erase_if(m_windows, [this](const WindowSwitcherEntry& entry) {
+        return StringUtils::toLower(entry.appId) != m_appScopeAppId;
+      });
+    }
+  }
 
   for (auto& entry : m_windows) {
     const auto thumbnail = thumbnails.find(identityKeyForEntry(entry));

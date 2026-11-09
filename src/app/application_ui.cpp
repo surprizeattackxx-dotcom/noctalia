@@ -15,6 +15,7 @@
 #include "launcher/app_provider.h"
 #include "launcher/dmenu_provider.h"
 #include "launcher/emoji_provider.h"
+#include "launcher/krunner_provider.h"
 #include "launcher/math_provider.h"
 #include "launcher/panel_provider.h"
 #include "launcher/plugin_launcher_provider.h"
@@ -51,6 +52,7 @@
 #include "shell/wayland/shell_globals.h"
 #include "system/brightness_service.h"
 #include "system/easyeffects_service.h"
+#include "system/format_units.h"
 #include "ui/app_icon_colorization.h"
 #include "ui/controls/context_menu_popup.h"
 #include "ui/style.h"
@@ -316,6 +318,23 @@ void Application::initLockScreenAndSession() {
     m_lockscreenWidgetsController.onLockStateChanged();
     syncLockScreenDoNotDisturb();
   });
+  if (compositors::isKde() && m_bus != nullptr) {
+    // KDE's own screen locker holds the lock; mirror its state into hooks, idle and screen time.
+    m_kdeLockWatcher = std::make_unique<compositors::kde::KdeLockWatcher>(*m_bus, [this](bool locked) {
+      if (LockScreen::kdeOverlayEnabled()) {
+        // Show/dismiss Noctalia's lock screen above KDE's locker; its session hooks do the bookkeeping below.
+        if (locked ? m_lockScreen.lockOverlay() : m_lockScreen.endOverlay()) {
+          return;
+        }
+      }
+      m_idleManager.setSessionLocked(locked);
+      m_screenTimeService.setSessionLocked(locked);
+      m_hookManager.fire(locked ? HookKind::SessionLocked : HookKind::SessionUnlocked);
+      if (!locked) {
+        DeferredCall::callLater([this] { m_timeService.forceTick(); });
+      }
+    });
+  }
   m_lockScreen.setSessionHooks(
       [this] {
         m_idleGraceOverlay.hide();
@@ -371,6 +390,9 @@ void Application::initLockScreenAndSession() {
       }
     });
     m_logindService->setUnlockCallback([this] {
+      if (m_lockScreen.endOverlay()) {
+        return; // KDE's locker already unlocked; just dismiss the overlay
+      }
       if (m_lockScreen.isActive()) {
         m_lockScreen.unlock();
       }
@@ -647,6 +669,9 @@ void Application::initPanelManagerAndPanels() {
     launcherPanel->addProvider(std::make_unique<SessionProvider>(&m_configService, &m_sessionActionRunner));
     launcherPanel->addProvider(std::make_unique<MathProvider>(&m_clipboardService, &m_configService, &m_httpClient));
     launcherPanel->addProvider(std::make_unique<EmojiProvider>(&m_clipboardService));
+    if (compositors::isKde() && m_bus != nullptr) {
+      launcherPanel->addProvider(std::make_unique<KrunnerProvider>(*m_bus));
+    }
     launcherPanel->setCopiedActivationCallback([this] {
       const ClipboardAutoPasteMode mode = m_configService.config().shell.launcher.autoPaste;
       if (mode == ClipboardAutoPasteMode::Off) {
@@ -788,6 +813,25 @@ void Application::initNotificationAndOsd() {
   );
   m_idleGraceOverlay.initialize(m_wayland, &m_renderContext);
   m_pluginIdleWatches.initialize(m_wayland);
+  m_gameMode.setActiveAppProvider([this](bool focusedOnly) {
+    if (!focusedOnly) {
+      return m_compositorPlatform.runningAppIds();
+    }
+    const auto active = m_compositorPlatform.activeToplevel();
+    return active.has_value() ? std::vector<std::string>{active->appId} : std::vector<std::string>{};
+  });
+  m_gameMode.setChangeCallback([this](bool active) { applyGameMode(active); });
+  m_gameMode.configure(m_configService.config().gameMode);
+  FormatUnits::setTemperatureFahrenheit(m_configService.config().system.monitor.temperatureUnit == "fahrenheit");
+  m_configService.addReloadCallback(
+      [this] {
+        m_gameMode.configure(m_configService.config().gameMode);
+        FormatUnits::setTemperatureFahrenheit(m_configService.config().system.monitor.temperatureUnit == "fahrenheit");
+      },
+      "game_mode"
+  );
+  m_gamepadMonitor.setActivityCallback([this] { m_idleManager.noteExternalActivity(); });
+  m_gamepadMonitor.setEnabled(m_configService.config().idle.gamepadActivity);
   m_wayland.extension<ShellGlobals>().setIdleCapabilitiesReadyCallback([this] {
     m_idleManager.reload(m_configService.config().idle);
     m_pluginIdleWatches.onCapabilitiesReady();
@@ -853,6 +897,7 @@ void Application::initNotificationAndOsd() {
   m_configService.addReloadCallback(
       [this] {
         if (m_configService.lastChange().idle) {
+          m_gamepadMonitor.setEnabled(m_configService.config().idle.gamepadActivity);
           m_idleManager.reload(m_configService.config().idle);
         }
       },
@@ -1018,6 +1063,11 @@ void Application::initWidgetControllersAndCallbacks() {
   auto shouldRefreshControlCenter = [this] { return m_panelManager.isOpenPanel("control-center"); };
 
   m_dock.initialize(m_compositorPlatform, &m_configService, &m_renderContext);
+  if (m_bus != nullptr) {
+    // Unread counts that apps publish through the Unity launcher API show as a badge on their dock icon.
+    m_launcherEntries = std::make_unique<LauncherEntryService>(*m_bus);
+    m_launcherEntries->setChangeCallback([this] { m_dock.refresh(); });
+  }
   const DesktopWidgetScriptDeps desktopWidgetScriptDeps{
       .scriptApi = &m_scriptApi,
       .fileWatcher = &m_fileWatcher,
@@ -1202,4 +1252,44 @@ TimeService::Precision Application::timePrecisionNeeded() const {
   // Minute is the idle floor: it settles minute-aligned clocks. Wallpaper
   // automation wakes through its own deadline instead.
   return TimeService::Precision::Minute;
+}
+
+void Application::applyGameMode(bool active) {
+  const GameModeConfig& cfg = m_configService.config().gameMode;
+  if (active) {
+    if (cfg.dnd) {
+      m_gameModePrevDnd = m_notificationManager.doNotDisturb();
+      m_notificationManager.setDoNotDisturb(true);
+    }
+    if (cfg.inhibitIdle && !m_idleInhibitor.enabled() && m_idleInhibitor.available()) {
+      m_idleInhibitor.setEnabled(true);
+      m_gameModeSetCaffeine = true;
+    }
+    if (!cfg.powerProfile.empty() && m_powerProfilesService != nullptr) {
+      m_gameModePrevProfile = m_powerProfilesService->activeProfile();
+      if (m_gameModePrevProfile != cfg.powerProfile) {
+        (void)m_powerProfilesService->setActiveProfile(cfg.powerProfile);
+      } else {
+        m_gameModePrevProfile.clear();
+      }
+    }
+    m_hookManager.fire(HookKind::GameModeStarted, {{"NOCTALIA_GAME_APP", m_gameMode.detectedApp()}});
+  } else {
+    if (cfg.dnd) {
+      m_notificationManager.setDoNotDisturb(m_gameModePrevDnd);
+    }
+    if (m_gameModeSetCaffeine) {
+      m_idleInhibitor.setEnabled(false);
+      m_gameModeSetCaffeine = false;
+    }
+    if (!m_gameModePrevProfile.empty() && m_powerProfilesService != nullptr) {
+      (void)m_powerProfilesService->setActiveProfile(m_gameModePrevProfile);
+      m_gameModePrevProfile.clear();
+    }
+    m_hookManager.fire(HookKind::GameModeEnded);
+  }
+  m_bar.refresh();
+  if (m_panelManager.isOpenPanel("control-center")) {
+    m_panelManager.refresh();
+  }
 }

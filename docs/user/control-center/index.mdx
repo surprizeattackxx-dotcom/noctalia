@@ -111,6 +111,8 @@ show_visualizer = true
 
 The Audio tab groups PipeWire output, input, device, and stream controls. Use it for volume changes, muting, selecting devices, and inspecting application streams without opening an external mixer.
 
+Below the application streams, **Other Devices** lists every output and input that is not the current default, each with its own volume slider and mute button, so you can mix a capture card or a second output without making it the default. The output and input menus (the ⋮ button) also list the profiles of the sound card behind the current device, for example Analog Stereo Duplex versus a Digital Stereo (HDMI) output; picking one runs `pactl set-card-profile`. Unavailable profiles, such as an unplugged HDMI port, are hidden. Card profiles need `pactl` (pipewire-pulse).
+
 ## Monitor
 
 The Monitor tab exposes brightness controls when Noctalia has a controllable backlight for the display. If no writable brightness device is available, the tab remains available but has no write controls to expose.
@@ -138,6 +140,10 @@ On the NetworkManager backend, a Wi-Fi connection that fails shows a notificatio
 While NetworkManager runs a Wi-Fi device as a hotspot (an access-point-mode profile), the tab does not list the hotspot as a joined network or scan on that device, the Wi-Fi list says the device is running a hotspot, and the Wi-Fi shortcut shows a hotspot icon instead of the not-connected one. Turning Wi-Fi off stops the hotspot, since both use the same radio.
 
 ### Enterprise Wi-Fi (802.1X)
+
+The **+** button in the Wi-Fi card header joins a hidden network (one that does not broadcast its name). Enter the exact network name, pick the security (open, WPA/WPA2 Personal, or WPA3 Personal) and type the password; WPA passwords are 8 to 63 characters. NetworkManager and iwd support it; the wpa_supplicant backend does not show the button. NetworkManager saves the profile with the hidden flag after a successful connection, so it reconnects on its own.
+
+The trash button on a saved network, and on a paired Bluetooth device, asks for confirmation: the first click turns it into a red warning button, and a second click within three seconds forgets the network or device. It disarms itself if you do nothing.
 
 Clicking a WPA2/WPA3-Enterprise network opens a credential form instead of the pre-shared-key field: EAP method (PEAP or TTLS), inner authentication, identity, anonymous identity, server domain suffix, and CA certificate path. The password field below the form is the one used for the EAP login.
 

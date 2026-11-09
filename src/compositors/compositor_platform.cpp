@@ -338,6 +338,13 @@ namespace {
     return compositors::ext_workspace::setOutputPower(on);
   }
 
+  // KWin has no wlr-output-power; Plasma exposes DPMS through kscreen-doctor.
+  [[nodiscard]] bool setKdeOutputPower(WaylandConnection& /*wayland*/, bool on) {
+    return static_cast<bool>(
+        process::runSyncWithTimeout({"kscreen-doctor", "--dpms", on ? "on" : "off"}, std::chrono::milliseconds(3000))
+    );
+  }
+
   [[nodiscard]] std::unique_ptr<compositors::OutputPowerBackend>
   createOutputPowerBackend(compositors::CompositorRuntimeRegistry& runtimeRegistry) {
     switch (compositors::detect()) {
@@ -371,9 +378,10 @@ namespace {
             return compositors::umbriel::setOutputPower(runtime, on);
           }
       );
+    case compositors::CompositorKind::Kde:
+      return std::make_unique<LambdaOutputPowerBackend>(&setKdeOutputPower);
     case compositors::CompositorKind::Dwl:
     case compositors::CompositorKind::Labwc:
-    case compositors::CompositorKind::Kde:
     case compositors::CompositorKind::Unknown:
       return std::make_unique<LambdaOutputPowerBackend>(&setGenericOutputPower);
     }
@@ -916,9 +924,11 @@ std::vector<std::string> CompositorPlatform::runningAppIds(wl_output* outputFilt
     return ids;
   }
   if (compositors::isKde() && m_kwinActiveWindow != nullptr && m_kwinActiveWindow->isAvailable()) {
-    const auto ids = m_kwinActiveWindow->runningAppIds();
-    if (!ids.empty()) {
-      (void)outputFilter;
+    // Per-monitor taskbar: KWin tags every window with its output, so filter here. When a filter is
+    // set the (possibly empty) KWin answer is authoritative; falling through would list every window.
+    const std::string outputName = outputFilter != nullptr ? connectorNameForOutput(outputFilter) : std::string{};
+    const auto ids = m_kwinActiveWindow->runningAppIds(outputName);
+    if (!ids.empty() || !outputName.empty()) {
       return ids;
     }
   }
@@ -932,9 +942,9 @@ std::vector<ToplevelInfo> CompositorPlatform::windowsForApp(
     return enrichedWindowsForApp(idLower, wmClassLower, outputFilter);
   }
   if (compositors::isKde() && m_kwinActiveWindow != nullptr && m_kwinActiveWindow->isAvailable()) {
-    const auto kdeWindows = m_kwinActiveWindow->windowsForApp(idLower, wmClassLower);
-    if (!kdeWindows.empty()) {
-      (void)outputFilter;
+    const std::string outputName = outputFilter != nullptr ? connectorNameForOutput(outputFilter) : std::string{};
+    const auto kdeWindows = m_kwinActiveWindow->windowsForApp(idLower, wmClassLower, outputName);
+    if (!kdeWindows.empty() || !outputName.empty()) {
       return kdeWindows;
     }
   }
@@ -1696,6 +1706,18 @@ void CompositorPlatform::activateKdeWindow(
   }
 }
 
+void CompositorPlatform::moveKdeWindowToDesktop(const std::string& uuid, int desktopIndex) {
+  if (m_kwinActiveWindow != nullptr && m_kwinActiveWindow->isAvailable()) {
+    m_kwinActiveWindow->moveWindowToDesktop(uuid, desktopIndex);
+  }
+}
+
+void CompositorPlatform::moveKdeWindowToOutput(const std::string& uuid, const std::string& outputName) {
+  if (m_kwinActiveWindow != nullptr && m_kwinActiveWindow->isAvailable()) {
+    m_kwinActiveWindow->moveWindowToOutput(uuid, outputName);
+  }
+}
+
 bool CompositorPlatform::cycleKeyboardLayout() const {
   return m_keyboardLayoutBackend != nullptr && m_keyboardLayoutBackend->cycleLayout();
 }
@@ -1802,6 +1824,13 @@ bool CompositorPlatform::requestSessionExit() const {
     }
     break;
   case compositors::CompositorKind::Kde:
+    // Let ksmserver save the session and close apps cleanly; Noctalia's own menu already confirmed.
+    if (process::launchFirstAvailable(
+            {{"busctl", "--user", "call", "org.kde.Shutdown", "/Shutdown", "org.kde.Shutdown", "logout"}}
+        )) {
+      return true;
+    }
+    break;
   case compositors::CompositorKind::Unknown:
     break;
   }

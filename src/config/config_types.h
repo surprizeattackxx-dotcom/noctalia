@@ -336,6 +336,10 @@ struct IdleBehaviorConfig {
   bool lockBeforeSuspend = true;
   /// Shorter timeout (seconds) applied only while the session is locked; 0 = always use timeoutSeconds.
   double lockedTimeoutSeconds = 0.0;
+  /// Count only real input (keyboard, pointer, touch) as activity: caffeine, video-playback inhibits and other
+  /// idle inhibitors no longer hold this behavior off. Needs ext-idle-notify v2; otherwise the behavior stays
+  /// inhibitable.
+  bool ignoreInhibitors = false;
 
   bool operator==(const IdleBehaviorConfig&) const = default;
 };
@@ -365,6 +369,8 @@ struct IdleConfig {
   /// from transparent to opaque over this many seconds, then runs `command`. Compositor activity during
   /// the fade cancels. When 0, the idle command runs immediately with no overlay.
   float preActionFadeSeconds = 2.0F;
+  /// Count game controller input (buttons, large stick moves) as activity, which the compositor ignores.
+  bool gamepadActivity = true;
 
   bool operator==(const IdleConfig&) const = default;
 };
@@ -1407,8 +1413,36 @@ struct WeatherConfig {
   bool effects = true;
   std::int32_t refreshMinutes = 30;
   std::string unit = "metric";
+  /// Per-quantity overrides of `unit` ("" follows it). temperature_unit: c|f. wind_unit: kmh|mph|ms|kn.
+  /// pressure_unit: hpa|inhg|mmhg|kpa.
+  std::string temperatureUnit;
+  std::string windUnit;
+  std::string pressureUnit;
+  /// Fetch the air quality index (separate Open-Meteo endpoint, same coordinates).
+  bool airQuality = true;
+  /// Notify when rain or snow is likely soon: the first upcoming hour within `rainAlertHours` whose chance is at
+  /// least `rainAlertPercent` (and the current hour is below it). One alert per spell.
+  bool rainAlert = false;
+  std::int32_t rainAlertPercent = 60;
+  std::int32_t rainAlertHours = 3;
 
   bool operator==(const WeatherConfig&) const = default;
+};
+
+struct GameModeConfig {
+  /// Turn game mode on by itself while a window matching `apps` is focused.
+  bool autoDetect = true;
+  /// Focused-window app id globs (case-insensitive, `*` wildcard). `steam_app_*` matches every Proton game.
+  std::vector<std::string> apps = {"steam_app_*", "gamescope"};
+  /// true: game mode follows the focused window and ends when you switch away. false: it stays on while any
+  /// matching window is running, so alt-tabbing to chat does not end it.
+  bool requireFocus = true;
+  bool dnd = true;         // do-not-disturb while active
+  bool inhibitIdle = true; // hold off idle lock / screen off / suspend while active
+  /// power-profiles-daemon profile to switch to while active (e.g. "performance"); empty leaves it alone.
+  std::string powerProfile;
+
+  bool operator==(const GameModeConfig&) const = default;
 };
 
 struct StorageConfig {
@@ -1480,6 +1514,8 @@ struct SystemConfig {
 
     bool enabled = true;
     std::string cpuTempSensorPath;
+    /// "celsius" (default) or "fahrenheit": unit for the CPU/GPU temperature readouts.
+    std::string temperatureUnit = "celsius";
     float cpuPollSeconds = 2.0F;
     // GPU probes only run while something displays a GPU stat (SystemMonitorService retain counts),
     // so an idle machine never wakes a discrete GPU. Set to 0 to stop probing it entirely.
@@ -1690,6 +1726,10 @@ enum class HookKind : std::uint8_t {
   BatteryPlugged,
   BatteryPercentageChanged,
   PowerProfileChanged,
+  SystemSuspending,
+  SystemResumed,
+  GameModeStarted,
+  GameModeEnded,
   Count
 };
 
@@ -1712,6 +1752,10 @@ constexpr EnumOption<HookKind> kHookKinds[] = {
     {HookKind::BatteryPlugged, "battery_plugged", ""},
     {HookKind::BatteryPercentageChanged, "battery_percentage_changed", ""},
     {HookKind::PowerProfileChanged, "power_profile_changed", ""},
+    {HookKind::SystemSuspending, "system_suspending", ""},
+    {HookKind::SystemResumed, "system_resumed", ""},
+    {HookKind::GameModeStarted, "game_mode_started", ""},
+    {HookKind::GameModeEnded, "game_mode_ended", ""},
 };
 
 static_assert(sizeof(kHookKinds) / sizeof(kHookKinds[0]) == static_cast<std::size_t>(HookKind::Count));
@@ -1868,6 +1912,8 @@ struct ThemeConfig {
   bool pureBlackDark = false;
   TerminalColors terminalColors = TerminalColors::Palette;
   bool syncColorScheme = true;
+  /// Include "auto" when the dark mode shortcut cycles; false cycles dark and light only.
+  bool cycleIncludesAuto = true;
   TemplatesConfig templates;
 
   bool operator==(const ThemeConfig&) const = default;
@@ -2022,6 +2068,7 @@ struct Config {
   OsdConfig osd;
   NotificationConfig notification;
   WeatherConfig weather;
+  GameModeConfig gameMode;
   CalendarConfig calendar;
   SystemConfig system;
   AudioConfig audio;

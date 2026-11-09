@@ -85,11 +85,32 @@ namespace {
     return variants;
   }
 
-  const std::vector<std::vector<std::string>>& rebootCommandVariants() {
-    static const std::vector<std::vector<std::string>> variants = {
-        {"systemctl", "reboot"}, {"loginctl", "reboot"}, {"reboot"},         {"/sbin/reboot"},
-        {"/usr/sbin/reboot"},    {"pkexec", "reboot"},   {"run0", "reboot"}, {"sudo", "-n", "reboot"},
-    };
+  // On KDE, go through ksmserver first so the session is saved and apps close cleanly; the plain
+  // systemctl variants stay as fallbacks.
+  [[nodiscard]] std::vector<std::vector<std::string>>
+  withKdeFirst(std::vector<std::string> kdeMethod, std::vector<std::vector<std::string>> variants) {
+    if (compositors::isKde()) {
+      std::vector<std::string> kde = {"busctl", "--user", "call", "org.kde.Shutdown", "/Shutdown", "org.kde.Shutdown"};
+      kde.insert(kde.end(), kdeMethod.begin(), kdeMethod.end());
+      variants.insert(variants.begin(), std::move(kde));
+    }
+    return variants;
+  }
+
+  [[nodiscard]] const std::vector<std::vector<std::string>>& rebootCommandVariants() {
+    static const std::vector<std::vector<std::string>> variants = withKdeFirst(
+        {"logoutAndReboot"},
+        {
+            {"systemctl", "reboot"},
+            {"loginctl", "reboot"},
+            {"reboot"},
+            {"/sbin/reboot"},
+            {"/usr/sbin/reboot"},
+            {"pkexec", "reboot"},
+            {"run0", "reboot"},
+            {"sudo", "-n", "reboot"},
+        }
+    );
     return variants;
   }
 
@@ -100,11 +121,20 @@ namespace {
     return variants;
   }
 
-  const std::vector<std::vector<std::string>>& shutdownCommandVariants() {
-    static const std::vector<std::vector<std::string>> variants = {
-        {"systemctl", "poweroff"}, {"loginctl", "poweroff"}, {"poweroff"},         {"/sbin/poweroff"},
-        {"/usr/sbin/poweroff"},    {"pkexec", "poweroff"},   {"run0", "poweroff"}, {"sudo", "-n", "poweroff"},
-    };
+  [[nodiscard]] const std::vector<std::vector<std::string>>& shutdownCommandVariants() {
+    static const std::vector<std::vector<std::string>> variants = withKdeFirst(
+        {"logoutAndShutdown"},
+        {
+            {"systemctl", "poweroff"},
+            {"loginctl", "poweroff"},
+            {"poweroff"},
+            {"/sbin/poweroff"},
+            {"/usr/sbin/poweroff"},
+            {"pkexec", "poweroff"},
+            {"run0", "poweroff"},
+            {"sudo", "-n", "poweroff"},
+        }
+    );
     return variants;
   }
 
