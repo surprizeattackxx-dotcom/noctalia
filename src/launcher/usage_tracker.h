@@ -14,6 +14,8 @@ public:
 
   void record(std::string_view providerId, std::string_view resultId);
   void clear();
+  /// Forgets the recently-opened lists but keeps the activation counts (frequency ordering).
+  void clearRecentlyUsed();
   int getCount(std::string_view providerId, std::string_view resultId);
   int getRecentlyUsedIndex(std::string_view providerId, std::string_view resultId);
   std::size_t getRecentlyUsedCount(std::string_view providerId);
