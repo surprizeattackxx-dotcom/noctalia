@@ -70,6 +70,9 @@ int batteryWarningThresholdForDevice(
       return deviceThreshold.warningThreshold;
     }
   }
+  if (device.type == UPowerDeviceType::GamingInput) {
+    return config.gamingWarningThreshold;
+  }
   // Without an explicit entry, every other battery stays silent. That includes a second laptop pack
   // (BAT1 on a two-battery laptop): the system battery already warns on the combined charge.
   return 0;
@@ -150,7 +153,8 @@ namespace {
     notifications.addInternal(
         i18n::tr("notifications.internal.battery"), title, body, urgency, timeout,
         std::string("noctalia-glyph:battery-exclamation"), std::nullopt, std::nullopt, std::nullopt,
-        isSystem ? NotificationDndPolicy::ShowToast : NotificationDndPolicy::Respect
+        isSystem || device.type == UPowerDeviceType::GamingInput ? NotificationDndPolicy::ShowToast
+                                                                 : NotificationDndPolicy::Respect
     );
   }
 
