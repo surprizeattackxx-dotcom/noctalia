@@ -279,6 +279,7 @@ uint32_t NotificationManager::addOrReplace(NotificationRequest request) {
   auto& imageData = request.imageData;
   auto& category = request.category;
   auto& desktopEntry = request.desktopEntry;
+  const auto progress = request.progress;
   const auto& forcedId = request.forcedId;
 
   if (actions.size() > kMaxNotificationActions * 2) {
@@ -355,7 +356,8 @@ uint32_t NotificationManager::addOrReplace(NotificationRequest request) {
            || n.iconIsAppIcon != request.iconIsAppIcon
            || n.imageData != imageData
            || n.category != category
-           || n.desktopEntry != desktopEntry);
+           || n.desktopEntry != desktopEntry
+           || n.progress != progress);
 
       n.origin = origin;
       n.transient = transient;
@@ -375,6 +377,7 @@ uint32_t NotificationManager::addOrReplace(NotificationRequest request) {
       n.imageData = std::move(imageData);
       n.category = std::move(category);
       n.desktopEntry = std::move(desktopEntry);
+      n.progress = progress;
       n.receivedTime = now;
       n.expiryTime = scheduleExpiry(now, timeout);
       n.receivedWallClock = wallNow;
@@ -405,7 +408,8 @@ uint32_t NotificationManager::addOrReplace(NotificationRequest request) {
 
   // Suppress immediate duplicate bursts. Later same-content notifications should still be visible.
   for (const auto& existing : std::views::reverse(m_notifications)) {
-    if (hasSameContent(existing, origin, appName, summary, body, sender)
+    if (request.coalesce
+        && hasSameContent(existing, origin, appName, summary, body, sender)
         && now - existing.receivedTime < kImplicitDuplicateWindow) {
       logNotification(existing, "duplicate ignored");
       return existing.id;
@@ -435,6 +439,7 @@ uint32_t NotificationManager::addOrReplace(NotificationRequest request) {
           .imageData = std::move(imageData),
           .category = std::move(category),
           .desktopEntry = std::move(desktopEntry),
+          .progress = progress,
           .receivedTime = now,
           .expiryTime = scheduleExpiry(now, timeout),
           .receivedWallClock = wallNow,
@@ -514,6 +519,16 @@ void NotificationManager::setInternalActionCallback(ActionInvokeCallback callbac
   m_internalActionCallback = std::move(callback);
 }
 
+int NotificationManager::addInternalActionHandler(ActionInvokeCallback callback) {
+  const int token = m_nextCallbackToken++;
+  m_internalActionHandlers.emplace_back(token, std::move(callback));
+  return token;
+}
+
+void NotificationManager::removeInternalActionHandler(int token) {
+  std::erase_if(m_internalActionHandlers, [token](const auto& entry) { return entry.first == token; });
+}
+
 void NotificationManager::setActionInvokeCallback(ActionInvokeCallback callback) {
   m_actionInvokeCallback = std::move(callback);
 }
@@ -574,6 +589,11 @@ bool NotificationManager::invokeAction(
   if (notification->origin == NotificationOrigin::Internal) {
     if (m_internalActionCallback) {
       m_internalActionCallback(id, actionKey, activationToken, notification->sender);
+    }
+    // A handler may add or remove handlers; iterate a copy.
+    const auto handlers = m_internalActionHandlers;
+    for (const auto& [token, handler] : handlers) {
+      handler(id, actionKey, activationToken, notification->sender);
     }
   } else if (m_actionInvokeCallback) {
     m_actionInvokeCallback(id, actionKey, activationToken, notification->sender);

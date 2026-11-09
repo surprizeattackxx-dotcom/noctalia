@@ -67,6 +67,8 @@ struct Notification {
   std::optional<NotificationImageData> imageData;
   std::optional<std::string> category;
   std::optional<std::string> desktopEntry;
+  /// 0-100 progress (the `value` hint, or a KDE job). Toasts draw a bar; absent = not a progress notification.
+  std::optional<int> progress;
   TimePoint receivedTime;              // add/replace time used for duplicate burst suppression
   std::optional<TimePoint> expiryTime; // absent = never expires
   /// Wall-clock receive time (history UI, persistence). Optional for pre-migration / corrupt rows.

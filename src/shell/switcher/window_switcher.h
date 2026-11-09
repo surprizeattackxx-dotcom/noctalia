@@ -16,7 +16,9 @@ class AsyncTextureCache;
 class CompositorPlatform;
 class ConfigService;
 class IpcService;
+class KwinWindowCapture;
 class RenderContext;
+class SessionBus;
 class ToplevelThumbnailCapture;
 class WaylandConnection;
 struct wl_callback;
@@ -42,6 +44,8 @@ public:
       WaylandConnection& wayland, RenderContext* renderContext, CompositorPlatform& platform, ConfigService* config,
       AsyncTextureCache* asyncTextures
   );
+  // KDE Plasma: window thumbnails come from KWin over D-Bus instead of ext-image-copy-capture.
+  void setSessionBus(SessionBus* bus);
   void registerIpc(IpcService& ipc);
   void onConfigReload();
   void onOutputChange();
@@ -101,9 +105,12 @@ private:
   struct ThumbnailRequest {
     std::string windowKey;
     std::uintptr_t captureHandle = 0;
+    std::string kwinWindowId; // set instead of captureHandle when the window is captured through KWin
     ThumbnailTarget target;
   };
+  bool kwinCaptureUsable() const;
   std::unique_ptr<ToplevelThumbnailCapture> m_thumbnailCapture;
+  std::unique_ptr<KwinWindowCapture> m_kwinCapture;
   std::deque<ThumbnailRequest> m_thumbnailQueue;
   std::string m_inFlightThumbnailKey;
   ThumbnailTarget m_thumbnailTarget;
