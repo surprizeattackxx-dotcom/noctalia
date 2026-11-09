@@ -5,6 +5,7 @@
 #include "cli/parse.h"
 #include "cli/schema.h"
 #include "cli/schema_msg.h"
+#include "compositors/compositor_detect.h"
 #include "compositors/compositor_platform.h"
 #include "config/color_spec.h"
 #include "config/config_service.h"
@@ -26,6 +27,7 @@
 #include "shell/panel/panel_manager.h"
 #include "shell/wayland/clipboard_service.h"
 #include "shell/wayland/foreign_toplevels.h"
+#include "system/process.h"
 #include "time/time_format.h"
 #include "util/file_utils.h"
 #include "util/string_utils.h"
@@ -891,6 +893,21 @@ ScreenshotService::OutputOptions ScreenshotService::outputOptionsFromConfig(cons
   return options;
 }
 
+namespace {
+
+  // KWin has no screencopy, so on KDE hand the capture to Spectacle (its own region/window/screen UI).
+  std::string kdeSpectacleFallback(const char* flag) {
+    if (!compositors::isKde() || !process::commandExists("spectacle")) {
+      return {};
+    }
+    if (!process::runAsync({"spectacle", flag})) {
+      return "error: could not start spectacle\n";
+    }
+    return "ok\n";
+  }
+
+} // namespace
+
 void ScreenshotService::registerIpc(IpcService& ipc, const ConfigService& configService) {
   ipc.bind(noctalia::cli::msg::screenshotRegion, [this, &ipc, &configService](const std::string& args) -> std::string {
     auto request = parseScreenshotIpcRequest(
@@ -900,6 +917,9 @@ void ScreenshotService::registerIpc(IpcService& ipc, const ConfigService& config
       return request.error();
     }
     if (!available()) {
+      if (auto fallback = kdeSpectacleFallback("-r"); !fallback.empty()) {
+        return fallback;
+      }
       return "error: screen capture is not available on this compositor\n";
     }
     if (m_annotationOverlay != nullptr && m_annotationOverlay->isActive()) {
@@ -923,6 +943,9 @@ void ScreenshotService::registerIpc(IpcService& ipc, const ConfigService& config
           return request.error();
         }
         if (!available()) {
+          if (auto fallback = kdeSpectacleFallback("-f"); !fallback.empty()) {
+            return fallback;
+          }
           return "error: screen capture is not available on this compositor\n";
         }
         if (m_annotationOverlay != nullptr && m_annotationOverlay->isActive()) {
@@ -993,6 +1016,9 @@ void ScreenshotService::registerIpc(IpcService& ipc, const ConfigService& config
       return request.error();
     }
     if (!m_toplevelCapture.available()) {
+      if (auto fallback = kdeSpectacleFallback("-a"); !fallback.empty()) {
+        return fallback;
+      }
       return "error: window capture is not available on this compositor\n";
     }
     if (overlayBusy()) {

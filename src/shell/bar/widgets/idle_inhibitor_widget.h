@@ -8,7 +8,12 @@ class InputArea;
 
 class IdleInhibitorWidget : public Widget {
 public:
-  explicit IdleInhibitorWidget(IdleInhibitor* inhibitor);
+  struct Options {
+    /// Hide the widget while caffeine is off (toggle it with `noctalia msg caffeine-toggle` or the control center).
+    bool hideWhenOff = false;
+  };
+
+  IdleInhibitorWidget(IdleInhibitor* inhibitor, Options options);
 
   void create() override;
 
@@ -18,6 +23,7 @@ private:
   void syncState(Renderer& renderer);
 
   IdleInhibitor* m_inhibitor = nullptr;
+  bool m_hideWhenOff = false;
   InputArea* m_area = nullptr;
   Glyph* m_glyph = nullptr;
   bool m_lastEnabled = false;

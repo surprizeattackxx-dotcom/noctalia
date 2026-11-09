@@ -481,6 +481,36 @@ namespace {
     return probe;
   }
 
+  // Friendly program name for a pid: comm (first word), the executable's name for sandboxed/odd comms, and the
+  // script name for interpreters, so "python" reads "python train.py" rather than a bare interpreter.
+  std::string gpuProcessName(unsigned int pid) {
+    const std::string base = "/proc/" + std::to_string(pid);
+    std::string name = StringUtils::trim(FileUtils::readSmallTextFile(base + "/comm").value_or(std::string{}));
+    if (const auto space = name.find(' '); space != std::string::npos) {
+      name.resize(space);
+    }
+    std::error_code ec;
+    if (name.empty() || name.front() == '.') {
+      const auto exe = std::filesystem::read_symlink(base + "/exe", ec);
+      if (!ec) {
+        name = exe.filename().string();
+      }
+    }
+    if (name.rfind("python", 0) == 0 || name == "node" || name == "java") {
+      std::ifstream cmd(base + "/cmdline", std::ios::binary);
+      std::string argv0;
+      std::string argv1;
+      std::getline(cmd, argv0, '\0');
+      while (std::getline(cmd, argv1, '\0')) {
+        if (!argv1.empty() && argv1.front() != '-') {
+          name += " " + std::filesystem::path(argv1).filename().string();
+          break;
+        }
+      }
+    }
+    return name.empty() ? "pid " + std::to_string(pid) : name;
+  }
+
   constexpr int kNvmlSuccess = 0;
   constexpr unsigned int kNvmlTemperatureGpu = 0;
 
@@ -503,6 +533,16 @@ namespace {
     unsigned long long used = 0;
   };
   using NvmlDeviceGetMemoryInfoFn = NvmlReturn (*)(NvmlDevice, NvmlMemory*);
+
+  // nvmlProcessInfo_t as used by the *_v3 process queries.
+  struct NvmlProcessInfo {
+    unsigned int pid = 0;
+    unsigned long long usedGpuMemory = 0;
+    unsigned int gpuInstanceId = 0;
+    unsigned int computeInstanceId = 0;
+  };
+  using NvmlDeviceGetProcessesFn = NvmlReturn (*)(NvmlDevice, unsigned int*, NvmlProcessInfo*);
+  constexpr unsigned long long kNvmlValueNotAvailable = ~0ULL;
 
   template <typename T> bool loadDlsymFunction(void* library, const char* name, T& out) {
     void* symbol = dlsym(library, name);
@@ -846,6 +886,47 @@ struct SystemMonitorService::NvidiaNvmlReader {
     return hasUsableVram(total) ? std::optional<GpuVramReading>{total} : std::nullopt;
   }
 
+  // Memory held per process across every device, compute and graphics clients merged by pid.
+  [[nodiscard]] std::vector<std::pair<unsigned int, std::uint64_t>> readGpuProcesses() {
+    std::vector<std::pair<unsigned int, std::uint64_t>> out;
+    if (!ensureReady()
+        || m_devices.empty()
+        || (m_getComputeProcesses == nullptr && m_getGraphicsProcesses == nullptr)) {
+      return out;
+    }
+    std::unordered_map<unsigned int, std::uint64_t> byPid;
+    for (const auto& device : m_devices) {
+      for (const NvmlDeviceGetProcessesFn fn : {m_getComputeProcesses, m_getGraphicsProcesses}) {
+        if (fn == nullptr) {
+          continue;
+        }
+        std::vector<NvmlProcessInfo> infos(64);
+        unsigned int count = static_cast<unsigned int>(infos.size());
+        int rc = fn(device.handle, &count, infos.data());
+        if (rc == 7 /* NVML_ERROR_INSUFFICIENT_SIZE */ && count > 0 && count <= 4096) {
+          infos.assign(count + 8, NvmlProcessInfo{});
+          count = static_cast<unsigned int>(infos.size());
+          rc = fn(device.handle, &count, infos.data());
+        }
+        if (rc != kNvmlSuccess) {
+          continue;
+        }
+        for (unsigned int i = 0; i < count && i < infos.size(); ++i) {
+          if (infos[i].usedGpuMemory == kNvmlValueNotAvailable) {
+            continue;
+          }
+          auto& slot = byPid[infos[i].pid];
+          slot = std::max(slot, static_cast<std::uint64_t>(infos[i].usedGpuMemory));
+        }
+      }
+    }
+    out.reserve(byPid.size());
+    for (const auto& [pid, bytes] : byPid) {
+      out.emplace_back(pid, bytes);
+    }
+    return out;
+  }
+
 private:
   struct DeviceRef {
     unsigned int index = 0;
@@ -879,6 +960,10 @@ private:
       m_state = State::Unavailable;
       return false;
     }
+
+    // Optional: older drivers lack the _v3 queries, in which case the per-process list just stays empty.
+    (void)loadDlsymFunction(m_library, "nvmlDeviceGetComputeRunningProcesses_v3", m_getComputeProcesses);
+    (void)loadDlsymFunction(m_library, "nvmlDeviceGetGraphicsRunningProcesses_v3", m_getGraphicsProcesses);
 
     if (m_init() != kNvmlSuccess) {
       close();
@@ -931,6 +1016,8 @@ private:
   NvmlDeviceGetTemperatureFn m_getTemperature = nullptr;
   NvmlDeviceGetUsageRatesFn m_getUsageRates = nullptr;
   NvmlDeviceGetMemoryInfoFn m_getMemoryInfo = nullptr;
+  NvmlDeviceGetProcessesFn m_getComputeProcesses = nullptr;
+  NvmlDeviceGetProcessesFn m_getGraphicsProcesses = nullptr;
 };
 
 // Intel exposes no device-wide busy counter, so usage is summed from each DRM client's fdinfo and
@@ -1495,6 +1582,30 @@ void SystemMonitorService::samplingLoop() {
             std::scoped_lock lock{m_statsMutex};
             m_latest.gpuVramUsedBytes = gpuVram->usedBytes;
             m_latest.gpuVramTotalBytes = gpuVram->totalBytes;
+          }
+          if (nvidiaDisplayState != NvidiaDisplayDeviceState::InactiveOnly) {
+            std::unordered_map<std::string, std::uint64_t> byName;
+            for (const auto& [pid, bytes] : ensureNvmlReader().readGpuProcesses()) {
+              byName[gpuProcessName(pid)] += bytes;
+            }
+            std::vector<GpuProcessUsage> processes;
+            processes.reserve(byName.size());
+            for (auto& [name, bytes] : byName) {
+              processes.push_back(GpuProcessUsage{.name = name, .usedBytes = bytes});
+            }
+            std::ranges::sort(processes, [](const GpuProcessUsage& a, const GpuProcessUsage& b) {
+              return a.usedBytes > b.usedBytes;
+            });
+            if (logSources) {
+              std::string summary;
+              for (std::size_t i = 0; i < processes.size() && i < 5; ++i) {
+                summary +=
+                    std::format("{}{} {} MiB", i == 0 ? "" : ", ", processes[i].name, processes[i].usedBytes >> 20);
+              }
+              kLog.info("GPU VRAM users: {}", summary.empty() ? std::string{"none listed"} : summary);
+            }
+            std::scoped_lock lock{m_statsMutex};
+            m_latest.gpuProcesses = std::move(processes);
           }
         }
       }

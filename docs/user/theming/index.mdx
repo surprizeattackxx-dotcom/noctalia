@@ -19,6 +19,7 @@ wallpaper_scheme  = "m3-content"  # generator used when source = "wallpaper"
 pure_black_dark   = false         # replace dark-mode backgrounds with pure black
 terminal_colors   = "palette"     # palette | standard, ANSI colors when source = "wallpaper"
 sync_color_scheme = true          # sync the GNOME color-scheme preference with mode
+cycle_includes_auto = true        # false: the dark mode shortcut cycles dark and light only
 ```
 
 Palette changes apply live when the resolved config changes, whether through Settings or edits to `~/.config/noctalia/*.toml`. Wallpaper-derived themes re-resolve automatically when the default wallpaper changes. See [Palette](/noctalia/theming/palette/) for color roles, custom palette files, and terminal colors.

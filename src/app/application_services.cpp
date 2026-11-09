@@ -81,6 +81,8 @@
 #include "system/keyboard_backlight_service.h"
 #include "system/process.h"
 #include "system/system_monitor_service.h"
+#include "time/time_format.h"
+#include "ui/app_icon_colorization.h"
 #include "ui/controls/input.h"
 #include "ui/style.h"
 
@@ -1185,6 +1187,7 @@ void Application::initSystemBusServices() {
           // fade-complete cleanup races with process freeze.
           m_idleGraceOverlay.hide();
           if (sleeping) {
+            m_hookManager.fire(HookKind::SystemSuspending);
             // Sleep-related locks must never offer passwordless unlock: revoke
             // before handling the transition so locks already pending or engaged
             // lose the window, and idempotently again after the lock armed below.
@@ -1242,6 +1245,7 @@ void Application::initSystemBusServices() {
           m_skipLockOnNextSleep = false;
           m_releaseSleepDelayWhenLocked = false;
           m_screenTimeService.setSuspendPaused(false);
+          m_hookManager.fire(HookKind::SystemResumed);
           if (m_configService.shouldLockBeforeSuspend() && m_logindService != nullptr) {
             m_logindService->acquireSleepDelayInhibit();
           }
@@ -1536,7 +1540,8 @@ void Application::initBrightnessAndPipewire() {
 
   try {
     m_brightnessService = std::make_unique<BrightnessService>(
-        m_systemBus.get(), m_compositorPlatform, m_configService.config().brightness
+        m_systemBus.get(), m_compositorPlatform, m_configService.config().brightness, BrightnessDdcRetryDelays{},
+        m_bus.get()
     );
     m_brightnessService->setChangeCallback([this, shouldRefreshControlCenter] {
       m_brightnessOsd.onBrightnessChanged(*m_brightnessService);
@@ -1873,6 +1878,18 @@ void Application::initSessionBusServices() {
     if (shouldRefreshControlCenter()) {
       m_panelManager.refresh();
     }
+  });
+  m_weatherService.setRainAlertCallback([this](const WeatherRainAlert& alert) {
+    const auto& fmt = m_configService.config().shell.timeFormat;
+    const std::string when = formatIsoTime(alert.timeIso, fmt.c_str());
+    m_notificationManager.addInternal(
+        i18n::tr("notifications.internal.weather"),
+        i18n::tr(alert.snow ? "notifications.internal.snow-soon-title" : "notifications.internal.rain-soon-title"),
+        i18n::tr(
+            "notifications.internal.rain-soon-body", "time", when, "percent", alert.percent, "hours", alert.hoursAhead
+        ),
+        Urgency::Normal, kDefaultNotificationTimeout * 2, std::string("noctalia-glyph:weather-cloud-rain")
+    );
   });
   m_weatherService.addChangeCallback([this, shouldRefreshControlCenter] {
     m_bar.refresh();

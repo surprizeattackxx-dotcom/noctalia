@@ -1,0 +1,35 @@
+name: rebase-upstream
+# Weekly: when upstream tags a newer release, replay the kde commits on top of it.
+# Clean replay -> pushes branch kde-rebase-<tag> (the build-kde workflow then checks it compiles).
+# Conflict -> opens an issue so a human ports the patch.
+on:
+  schedule: [{cron: '0 7 * * 1'}]
+  workflow_dispatch:
+permissions:
+  contents: write
+  issues: write
+jobs:
+  rebase:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: kde, fetch-depth: 0}
+      - name: Replay on newest upstream tag
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: |
+          git config user.name "kde-rebase-bot"; git config user.email "actions@users.noreply.github.com"
+          git remote add upstream https://github.com/noctalia-dev/noctalia.git
+          git fetch --tags --force upstream
+          base=$(cat .kde-base)
+          latest=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1)
+          if [ "$latest" = "$base" ] || [ -z "$latest" ]; then echo "up to date at $base"; exit 0; fi
+          if git ls-remote --exit-code --heads origin "kde-rebase-$latest" >/dev/null 2>&1; then echo "already proposed"; exit 0; fi
+          git checkout -q -b "kde-rebase-$latest"
+          if git rebase --onto "$latest" "$base" "kde-rebase-$latest"; then
+            echo "$latest" > .kde-base; git add .kde-base; git commit -qm "kde: base is now $latest"
+            git push origin "kde-rebase-$latest"
+          else
+            git rebase --abort
+            gh issue create --title "kde patches do not apply to $latest" \
+              --body "Rebasing kde onto $latest conflicted. Port the commits by hand."
+          fi
