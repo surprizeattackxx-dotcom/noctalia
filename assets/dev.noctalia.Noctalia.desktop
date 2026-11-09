@@ -9,6 +9,7 @@ Categories=Settings;DesktopSettings;
 StartupNotify=false
 Actions=Settings;
 Keywords=desktop;shell;wayland;
+X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 
 [Desktop Action Settings]
 Name=Open Settings

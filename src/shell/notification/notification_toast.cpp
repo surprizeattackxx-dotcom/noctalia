@@ -395,10 +395,27 @@ namespace {
     return container.height() + actionRowGap(scale);
   }
 
+  // Job/transfer progress bar shown under the body. Shared by the height measurement and the real card so both
+  // agree on its size.
+  std::unique_ptr<Node> makeToastJobProgress(int percent, Urgency urgency, float width, float scale) {
+    auto bar = ui::progressBar({
+        .fill = toastProgressFillColor(urgency),
+        .track = colorSpecFromRole(ColorRole::OnSurface, 0.15F),
+        .radius = 2.5F * scale,
+        .orientation = ProgressBarOrientation::Horizontal,
+        .progress = static_cast<float>(std::clamp(percent, 0, 100)) / 100.0F,
+        .width = width,
+        .height = 5.0F * scale,
+    });
+    return ui::column(
+        {.padding = Style::spaceXs * scale, .width = width + 2.0F * Style::spaceXs * scale}, std::move(bar)
+    );
+  }
+
   float measureToastCardHeight(
       Renderer& renderer, const ConfigService* config, std::string_view appName, std::string_view summary,
       std::string_view body, const std::vector<std::string>& actions, Urgency urgency, int displayDurationMs,
-      int summaryLines, int bodyLines, float scale
+      int summaryLines, int bodyLines, float scale, std::optional<int> progress
   ) {
     const float width = notificationWidth(config);
     const float cardW = cardWidth(scale, width);
@@ -463,6 +480,12 @@ namespace {
               .maxWidth = textMaxWidth,
               .maxLines = std::max(1, bodyLines),
           })
+      );
+    }
+
+    if (progress.has_value()) {
+      textColumn->addChild(
+          makeToastJobProgress(*progress, urgency, textMaxWidth - 2.0F * Style::spaceXs * scale, scale)
       );
     }
 
@@ -708,8 +731,10 @@ void NotificationToast::onNotificationEvent(const Notification& n, NotificationE
     }
     for (std::size_t i = 0; i < m_entries.size(); ++i) {
       if (m_entries[i].notificationId == n.id && !m_entries[i].exiting) {
-        const bool contentChanged =
-            m_entries[i].appName != n.appName || m_entries[i].summary != n.summary || m_entries[i].body != n.body;
+        const bool contentChanged = m_entries[i].appName != n.appName
+            || m_entries[i].summary != n.summary
+            || m_entries[i].body != n.body
+            || m_entries[i].progress != n.progress;
         const bool actionSetChanged = (m_entries[i].actions != n.actions) || (m_entries[i].icon != n.icon);
         const bool imageDataChanged = (m_entries[i].imageData != n.imageData);
         const float previousHeight = m_entries[i].height;
@@ -724,6 +749,7 @@ void NotificationToast::onNotificationEvent(const Notification& n, NotificationE
         m_entries[i].icon = n.icon;
         m_entries[i].iconIsAppIcon = n.iconIsAppIcon;
         m_entries[i].imageData = n.imageData;
+        m_entries[i].progress = n.progress;
         m_entries[i].urgency = n.urgency;
         m_entries[i].dndPolicy = n.dndPolicy;
         const int newDuration = resolveDisplayDuration(n.timeout);
@@ -954,6 +980,7 @@ void NotificationToast::addPopup(const Notification& n) {
   entry.icon = n.icon;
   entry.iconIsAppIcon = n.iconIsAppIcon;
   entry.imageData = n.imageData;
+  entry.progress = n.progress;
   entry.urgency = n.urgency;
   entry.dndPolicy = n.dndPolicy;
   entry.displayDurationMs = resolveDisplayDuration(n.timeout);
@@ -1829,7 +1856,7 @@ void NotificationToast::refreshEntryGeometry(PopupEntry& entry) const {
       maxToastCardHeight(scale),
       measureToastCardHeight(
           measureRenderer, m_config, entry.appName, entry.summary, entry.body, entry.actions, entry.urgency,
-          entry.displayDurationMs, kMaxSummaryLines, entry.toastBodyLines, scale
+          entry.displayDurationMs, kMaxSummaryLines, entry.toastBodyLines, scale, entry.progress
       )
   );
 }
@@ -2916,6 +2943,12 @@ InputArea* NotificationToast::buildCard(
       .participatesInLayout = entry.toastBodyLines > 0 && !StringUtils::isBlank(displayBody),
   });
   textColumn->addChild(std::move(body));
+
+  if (entry.progress.has_value()) {
+    textColumn->addChild(
+        makeToastJobProgress(*entry.progress, entry.urgency, textMaxWidth - 2.0F * Style::spaceXs * scale, scale)
+    );
+  }
 
   if (actionsRow != nullptr) {
     *outActionsRow = actionsRow.get();
