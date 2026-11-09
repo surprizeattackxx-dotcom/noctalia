@@ -1146,7 +1146,7 @@ std::optional<std::string> SysmonWidget::formatValueFor(SysmonStat stat, const S
 
   case SysmonStat::CpuTemp:
     if (stats.cpuTempAvailable && stats.cpuTempC.has_value()) {
-      return std::format("{:.0F}°C", *stats.cpuTempC);
+      return FormatUnits::formatTemperatureFromCelsius(*stats.cpuTempC);
     }
     return std::nullopt;
   case SysmonStat::CpuFreq:
@@ -1156,7 +1156,7 @@ std::optional<std::string> SysmonWidget::formatValueFor(SysmonStat stat, const S
     return std::nullopt;
   case SysmonStat::GpuTemp:
     if (stats.gpuTempC.has_value()) {
-      return std::format("{:.0F}°C", *stats.gpuTempC);
+      return FormatUnits::formatTemperatureFromCelsius(*stats.gpuTempC);
     }
     return std::nullopt;
 
@@ -1270,6 +1270,21 @@ std::vector<TooltipRow> SysmonWidget::buildTooltipRows(const std::string& curren
   }
 
   const SystemStats stats = m_monitor->latest();
+  // The VRAM stats list the biggest GPU memory users right under the headline value.
+  if (needsGpuVram(m_stat)) {
+    constexpr std::size_t kMaxProcessRows = 5;
+    for (std::size_t i = 0; i < stats.gpuProcesses.size() && i < kMaxProcessRows; ++i) {
+      const auto& proc = stats.gpuProcesses[i];
+      if (proc.usedBytes < (16ULL << 20)) {
+        break; // below 16 MiB is noise (cursor/compositor surfaces)
+      }
+      rows.push_back(
+          {proc.name,
+           proc.usedBytes >= (1ULL << 30) ? FormatUnits::formatBinaryBytesAsGib(proc.usedBytes)
+                                          : FormatUnits::formatBinaryMib(proc.usedBytes >> 20)}
+      );
+    }
+  }
   for (const SysmonStat stat : kTooltipStats) {
     if (stat == m_stat) {
       continue;

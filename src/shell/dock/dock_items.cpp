@@ -100,7 +100,8 @@ namespace {
   }
 
   void applyBadgeVisual(
-      Box* badge, DockEdge edge, float iconBaseX, float iconBaseY, float iconSize, float badgeSize, float iconScale
+      Box* badge, DockEdge edge, float iconBaseX, float iconBaseY, float iconSize, float badgeSize, float iconScale,
+      bool oppositeCorner = false
   ) {
     if (badge == nullptr) {
       return;
@@ -116,8 +117,10 @@ namespace {
     const float iconBottom = iconY + iconSize * (1.0F + iconScale) * 0.5F;
     const float scaledBadgeSize = badgeSize * iconScale;
     // Keep the badge on the screen-interior corner so a flush dock never needs an outer-edge gap.
-    const float badgeLeft = edge == DockEdge::Right ? iconLeft - scaledBadgeSize * (1.0F - kBadgeCornerInsetX)
-                                                    : iconRight - scaledBadgeSize * kBadgeCornerInsetX;
+    // The unread badge takes the other horizontal corner so both badges can show at once.
+    const bool onRightOfIcon = (edge == DockEdge::Right) == oppositeCorner;
+    const float badgeLeft = !onRightOfIcon ? iconLeft - scaledBadgeSize * (1.0F - kBadgeCornerInsetX)
+                                           : iconRight - scaledBadgeSize * kBadgeCornerInsetX;
     const float badgeTop = edge == DockEdge::Top ? iconBottom - scaledBadgeSize * (1.0F - kBadgeCornerInsetY)
                                                  : iconTop - scaledBadgeSize * kBadgeCornerInsetY;
     const float badgeCenterAdjust = badgeSize * (1.0F - iconScale) * 0.5F;
@@ -125,11 +128,12 @@ namespace {
   }
 
   void applyHoverItemVisual(
-      Node* iconNode, Box* badge, DockEdge edge, float iconBaseX, float iconBaseY, float iconSize, float badgeSize,
-      float scale
+      Node* iconNode, Box* badge, Box* unreadBadge, DockEdge edge, float iconBaseX, float iconBaseY, float iconSize,
+      float badgeSize, float scale
   ) {
     applyHoverIconVisual(iconNode, edge, iconBaseX, iconBaseY, iconSize, scale);
     applyBadgeVisual(badge, edge, iconBaseX, iconBaseY, iconSize, badgeSize, scale);
+    applyBadgeVisual(unreadBadge, edge, iconBaseX, iconBaseY, iconSize, badgeSize, scale, true);
   }
 
   void applyShellAppIconColorization(Image* image, const ShellConfig& shell, const DockConfig& dock) {
@@ -355,7 +359,7 @@ namespace {
   bool applyHoverIconScale(
       Node* iconNode, float& visualScale, AnimationManager::Id& animId, shell::dock::DockInstance& instance,
       float targetScale, float restScale, float lerpFactor, DockEdge edge, float baseX, float baseY, float iconSize,
-      Box* badge, float badgeSize
+      Box* badge, Box* unreadBadge, float badgeSize
   ) {
     if (iconNode == nullptr) {
       return false;
@@ -366,18 +370,18 @@ namespace {
     }
     if (visualScale < 0.0F) {
       visualScale = restScale;
-      applyHoverItemVisual(iconNode, badge, edge, baseX, baseY, iconSize, badgeSize, restScale);
+      applyHoverItemVisual(iconNode, badge, unreadBadge, edge, baseX, baseY, iconSize, badgeSize, restScale);
     }
     if (std::abs(visualScale - targetScale) <= 0.002F) {
       if (std::abs(visualScale - targetScale) > 0.0F) {
         visualScale = targetScale;
-        applyHoverItemVisual(iconNode, badge, edge, baseX, baseY, iconSize, badgeSize, targetScale);
+        applyHoverItemVisual(iconNode, badge, unreadBadge, edge, baseX, baseY, iconSize, badgeSize, targetScale);
       }
       return false;
     }
     const float next = visualScale + (targetScale - visualScale) * lerpFactor;
     visualScale = next;
-    applyHoverItemVisual(iconNode, badge, edge, baseX, baseY, iconSize, badgeSize, next);
+    applyHoverItemVisual(iconNode, badge, unreadBadge, edge, baseX, baseY, iconSize, badgeSize, next);
     return true;
   }
 
@@ -723,11 +727,36 @@ namespace shell::dock {
         );
       }
 
+      {
+        const float bd = std::max(kBadgeMinSize, iSize * kBadgeSizeRatio);
+        areaNode->addChild(
+            ui::box({
+                .out = &item.unreadBadge,
+                .radius = bd * 0.5F,
+                .width = bd,
+                .height = bd,
+                .visible = false,
+                .configure = [edge, iSize, bd](Box& box) {
+                  applyBadgeVisual(&box, edge, kCellPad, kCellPad, iSize, bd, 1.0F, true);
+                },
+            })
+        );
+        item.unreadBadge->addChild(
+            ui::label({
+                .out = &item.unreadBadgeLabel,
+                .fontSize = bd * kBadgeFontRatio,
+                .fontWeight = FontWeight::Bold,
+                .maxLines = 1,
+                .visible = false,
+            })
+        );
+      }
+
       auto* instPtr = &instance;
 
       item.tooltipText = dockItemTooltipText(model);
       configureDockTooltip(*areaNode, cfg, item.tooltipText);
-      areaNode->setAcceptedButtons(InputArea::buttonMask({BTN_LEFT, BTN_RIGHT}));
+      areaNode->setAcceptedButtons(InputArea::buttonMask({BTN_LEFT, BTN_RIGHT, BTN_MIDDLE}));
       const bool itemPinned = itemIndex < pinnedCount;
       areaNode->setOnPress([instPtr, clickContext, itemIndex, itemPinned](const InputArea::PointerData& d) {
         if (d.button != BTN_LEFT) {
@@ -800,6 +829,12 @@ namespace shell::dock {
           }
           return;
         }
+        if (d.button == BTN_MIDDLE) {
+          if (clickContext->callbacks.launchNew) {
+            clickContext->callbacks.launchNew(*instPtr, action);
+          }
+          return;
+        }
         if (d.button != BTN_LEFT) {
           return;
         }
@@ -821,7 +856,9 @@ namespace shell::dock {
           item.visualScale = iconScale;
           item.hoverMainOffset = 0.0F;
           const float badgeSize = std::max(kBadgeMinSize, iSize * kBadgeSizeRatio);
-          applyHoverItemVisual(iconNode, item.badge, edge, kCellPad, kCellPad, iSize, badgeSize, iconScale);
+          applyHoverItemVisual(
+              iconNode, item.badge, item.unreadBadge, edge, kCellPad, kCellPad, iSize, badgeSize, iconScale
+          );
         }
       }
     }
@@ -834,7 +871,8 @@ namespace shell::dock {
       const float launcherScale = cfg.inactiveScale;
       instance.launcherVisualScale = launcherScale;
       applyHoverItemVisual(
-          instance.launcherIconNode, nullptr, edge, kCellPad, launcherIconBaseY(cfg, iSize), iSize, 0.0F, launcherScale
+          instance.launcherIconNode, nullptr, nullptr, edge, kCellPad, launcherIconBaseY(cfg, iSize), iSize, 0.0F,
+          launcherScale
       );
     }
 
@@ -883,6 +921,12 @@ namespace shell::dock {
         if (item.badge != nullptr && !cfg.magnification) {
           const float bd = std::max(kBadgeMinSize, static_cast<float>(cfg.iconSize) * kBadgeSizeRatio);
           applyBadgeVisual(item.badge, edge, kCellPad, kCellPad, static_cast<float>(cfg.iconSize), bd, 1.0F);
+        }
+        if (item.unreadBadge != nullptr && !cfg.magnification) {
+          const float bd = std::max(kBadgeMinSize, static_cast<float>(cfg.iconSize) * kBadgeSizeRatio);
+          applyBadgeVisual(
+              item.unreadBadge, edge, kCellPad, kCellPad, static_cast<float>(cfg.iconSize), bd, 1.0F, true
+          );
         }
 
         if (!cfg.magnification && !dragActive) {
@@ -953,6 +997,27 @@ namespace shell::dock {
               dotNode->setPosition(main, y);
             }
           }
+        }
+      }
+
+      if (item.unreadBadge != nullptr && item.unreadBadgeLabel != nullptr) {
+        const bool show = model.unreadCount > 0;
+        item.unreadBadge->setVisible(show);
+        item.unreadBadgeLabel->setVisible(show);
+        if (show) {
+          const float bd = std::max(kBadgeMinSize, static_cast<float>(cfg.iconSize) * kBadgeSizeRatio);
+          item.unreadBadgeLabel->setText(model.unreadCount > 99 ? "99+" : std::to_string(model.unreadCount));
+          item.unreadBadgeLabel->setColor(colorSpecFromRole(ColorRole::OnError));
+          item.unreadBadge->setFill(colorSpecFromRole(ColorRole::Error));
+          item.unreadBadgeLabel->measure(renderer);
+          // Wide counts ("99+") grow the pill; single digits stay a circle.
+          const float width = std::max(bd, std::round(item.unreadBadgeLabel->width() + bd * 0.5F));
+          item.unreadBadge->setSize(width, bd);
+          item.unreadBadge->setRadius(bd * 0.5F);
+          item.unreadBadgeLabel->setPosition(
+              std::round((width - item.unreadBadgeLabel->width()) * 0.5F),
+              std::round((bd - item.unreadBadgeLabel->height()) * 0.5F)
+          );
         }
       }
 
@@ -1076,6 +1141,7 @@ namespace shell::dock {
     struct HoverSlot {
       InputArea* area = nullptr;
       Box* badge = nullptr;
+      Box* unreadBadge = nullptr;
       Node* iconNode = nullptr;
       float* visualScale = nullptr;
       float* hoverMainOffset = nullptr;
@@ -1117,6 +1183,7 @@ namespace shell::dock {
           HoverSlot{
               .area = item.area,
               .badge = item.badge,
+              .unreadBadge = item.unreadBadge,
               .iconNode = iconNode,
               .visualScale = &item.visualScale,
               .hoverMainOffset = &item.hoverMainOffset,
@@ -1187,7 +1254,7 @@ namespace shell::dock {
 
       if (applyHoverIconScale(
               slot.iconNode, *slot.visualScale, *slot.scaleAnimId, instance, slot.targetScale, slot.baseScale,
-              lerpFactor, edge, slot.iconBaseX, slot.iconBaseY, iSize, slot.badge, badgeSize
+              lerpFactor, edge, slot.iconBaseX, slot.iconBaseY, iSize, slot.badge, slot.unreadBadge, badgeSize
           )) {
         needsMoreFrames = true;
       }

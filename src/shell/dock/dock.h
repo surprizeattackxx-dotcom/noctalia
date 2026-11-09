@@ -68,6 +68,7 @@ private:
   void updateHoverZoomPointer(shell::dock::DockInstance& instance, float sceneX, float sceneY);
   void clearHoverZoomPointer(shell::dock::DockInstance& instance);
   void activateOrLaunchItem(shell::dock::DockInstance& instance, const shell::dock::DockItemAction& action);
+  void launchNewItem(shell::dock::DockInstance& instance, const shell::dock::DockItemAction& action);
   void tryFulfillPendingLaunchFocus();
   void openItemMenu(shell::dock::DockInstance& instance, const shell::dock::DockItemAction& action);
   void closeItemMenu();

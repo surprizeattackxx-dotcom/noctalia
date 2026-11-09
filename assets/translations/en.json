@@ -196,15 +196,22 @@
         "no-location": "No location",
         "off": "Weather off",
         "tooltip": {
+          "air-quality": "Air quality",
+          "cloud-cover": "Cloud cover",
           "condition": "Condition",
+          "dew-point": "Dew point",
           "feels-like": "Feels Like",
+          "gusts": "Gusts",
           "high": "High",
           "humidity": "Humidity",
           "low": "Low",
+          "pressure": "Pressure",
+          "rain-chance": "Rain chance",
           "sunrise": "Sunrise",
           "sunset": "Sunset",
           "temperature": "Temperature",
           "uv": "UV Index",
+          "visibility": "Visibility",
           "wind": "Wind"
         }
       }
@@ -289,6 +296,7 @@
   "control-center": {
     "audio": {
       "application-volumes": "Application Volumes",
+      "card-profile": "Card profile",
       "choose-effects-profile": "Choose a profile",
       "default-device": "Default device",
       "effects-profile": "Effects",
@@ -301,6 +309,7 @@
       "no-output-devices": "No output devices",
       "no-output-devices-body": "No playback sinks are currently available.",
       "no-output-selected": "No output device selected",
+      "other-devices": "Other Devices",
       "output-device-prefix": "Output",
       "unavailable-body": "PipeWire is not active.",
       "unavailable-title": "Audio unavailable"
@@ -311,6 +320,8 @@
       "auto-reconnect": "Auto-reconnect",
       "bluetooth": "Bluetooth",
       "enter-code": "Enter code",
+      "forget": "Forget device",
+      "forget-confirm": "Click again to forget this device",
       "no-devices": "No devices found. Start scanning to discover nearby Bluetooth devices.",
       "off": "Bluetooth is off",
       "pair-title": "Pair {device}",
@@ -407,6 +418,18 @@
       "error-missing-password": "Enter your password.",
       "error-unsupported-phase2": "PEAP requires MSCHAPv2 inner authentication.",
       "external-ip": "WAN {ip}",
+      "forget": "Forget network",
+      "forget-confirm": "Click again to forget this network",
+      "hidden-add": "Connect to a hidden network",
+      "hidden-error-failed": "Could not start the connection. Check that Wi-Fi is on.",
+      "hidden-error-password": "WPA passwords are 8 to 63 characters.",
+      "hidden-error-ssid": "Enter the network name (up to 32 characters).",
+      "hidden-prompt": "Connect to a hidden network",
+      "hidden-security": "Security",
+      "hidden-security-open": "Open (no password)",
+      "hidden-security-wpa2": "WPA/WPA2 Personal",
+      "hidden-security-wpa3": "WPA3 Personal",
+      "hidden-ssid": "Network name (SSID)",
       "hotspot-active": "Wi-Fi is running a hotspot; turning Wi-Fi off stops it",
       "identity": "Identity",
       "no-networks": "No networks in range",
@@ -565,14 +588,25 @@
       },
       "data-unavailable": "Weather data unavailable",
       "details": {
+        "air-quality": "Air Quality",
+        "cloud-cover": "Cloud Cover",
+        "daylight": "Daylight",
+        "dew-point": "Dew Point",
         "elevation": "Elevation",
         "feels-like": "Feels Like",
+        "gusts": "Wind Gusts",
+        "humidity": "Humidity",
+        "moon": "Moon",
+        "peak": "peak",
+        "pressure": "Pressure",
+        "rain-chance": "Rain Chance",
         "sunrise": "Sunrise",
         "sunset": "Sunset",
         "temp-max": "Temperature Max",
         "temp-min": "Temperature Min",
         "timezone": "Timezone",
         "uv-index": "UV Index",
+        "visibility": "Visibility",
         "wind": "Wind"
       },
       "disabled": "Enable [weather] in config.toml",
@@ -783,7 +817,9 @@
   "dock": {
     "actions": {
       "close": "Close",
-      "close-all": "Close All"
+      "close-all": "Close All",
+      "move-to-desktop": "Move to desktop {name}",
+      "move-to-output": "Move to {name}"
     },
     "launcher": "Launcher"
   },
@@ -1010,11 +1046,15 @@
       "network-connect-failed-title": "Could not connect to {ssid}",
       "polkit-agent": "Polkit Agent",
       "polkit-no-session": "Polkit agent needs logind, elogind, or XDG_SESSION_ID. On seatd-only setups it cannot register for graphical prompts. Use terminal pkexec for greeter sync, or install elogind for in-session authentication.",
+      "rain-soon-body": "{percent}% chance around {time} (in about {hours} h)",
+      "rain-soon-title": "Rain expected soon",
       "screen-time-reset": "Screen Time",
       "screen-time-reset-success": "Usage history cleared.",
       "session-bus-unavailable": "Session bus unavailable",
+      "snow-soon-title": "Snow expected soon",
       "wallpaper-palette-export": "Custom Palette",
-      "wallpaper-palette-export-success": "Saved \"{name}\" and switched palette source to custom."
+      "wallpaper-palette-export-success": "Saved \"{name}\" and switched palette source to custom.",
+      "weather": "Weather"
     }
   },
   "osd": {
@@ -1417,6 +1457,7 @@
           "screen-off": "Screen Off",
           "suspend": "Suspend"
         },
+        "ignore-inhibitors-label": "Ignore inhibitors (caffeine, video playback)",
         "kind-section-label": "Action",
         "locked-timeout-label": "Timeout while locked (seconds, 0 = off)",
         "name-label": "Name",
@@ -1801,6 +1842,25 @@
         "unit": {
           "imperial": "Imperial",
           "metric": "Metric"
+        },
+        "temperature": {
+          "": "Follow Units",
+          "c": "Celsius",
+          "f": "Fahrenheit"
+        },
+        "wind": {
+          "": "Follow Units",
+          "kmh": "km/h",
+          "kn": "Knots",
+          "mph": "mph",
+          "ms": "m/s"
+        },
+        "pressure": {
+          "": "Follow Units",
+          "hpa": "hPa",
+          "inhg": "inHg",
+          "kpa": "kPa",
+          "mmhg": "mmHg"
         }
       }
     },
@@ -1979,6 +2039,10 @@
           "description": "Choose a palette from ~/.config/noctalia/palettes/",
           "label": "Custom Palette",
           "search-placeholder": "Search custom palettes…"
+        },
+        "cycle-includes-auto": {
+          "label": "Dark mode shortcut includes Auto",
+          "description": "When off, the dark mode shortcut cycles dark and light only"
         },
         "export-wallpaper-palette": {
           "button": "Save as Custom Palette",
@@ -2486,6 +2550,14 @@
             "description": "Command to run when the active color palette changes",
             "label": "On Colors Changed"
           },
+          "game-mode-ended": {
+            "description": "Command to run when game mode turns off",
+            "label": "On Game Mode Ended"
+          },
+          "game-mode-started": {
+            "description": "Command to run when game mode turns on (NOCTALIA_GAME_APP names the detected app)",
+            "label": "On Game Mode Started"
+          },
           "logging-out": {
             "description": "Command to run before logging out",
             "label": "On Logout"
@@ -2514,6 +2586,14 @@
             "description": "Command to run after Noctalia starts",
             "label": "On Started"
           },
+          "system-resumed": {
+            "description": "Command to run after the system wakes from suspend or hibernate",
+            "label": "On System Resumed"
+          },
+          "system-suspending": {
+            "description": "Command to run when the system is about to suspend or hibernate (best effort: it runs as sleep begins)",
+            "label": "On System Suspending"
+          },
           "theme-mode-changed": {
             "description": "Command to run when the resolved theme mode changes between light and dark",
             "label": "On Theme Mode Changed"
@@ -2533,6 +2613,10 @@
         }
       },
       "idle": {
+        "gamepad-activity": {
+          "description": "Count game controller buttons and stick movement as activity, so idle lock, screen off and suspend do not fire mid-game",
+          "label": "Controller activity"
+        },
         "behaviors": {
           "description": "Named idle actions with presets (lock, screen off, suspend) or custom commands, timeouts, resume pairing, and order",
           "label": "Behaviors"
@@ -3344,17 +3428,45 @@
           "description": "Enable the weather service via open-meteo.com",
           "label": "Weather"
         },
+        "weather-air-quality": {
+          "description": "Show the air quality index, fetched from Open-Meteo's air quality service",
+          "label": "Air quality"
+        },
         "weather-effects": {
           "description": "Show visual weather effects",
           "label": "Weather Effects"
+        },
+        "weather-pressure-unit": {
+          "description": "Air pressure unit; follows Units unless set",
+          "label": "Pressure"
+        },
+        "weather-rain-alert": {
+          "label": "Rain alert",
+          "description": "Notify when rain or snow becomes likely within the next few hours"
+        },
+        "weather-rain-alert-hours": {
+          "label": "Rain alert window",
+          "description": "How many hours ahead to look"
+        },
+        "weather-rain-alert-percent": {
+          "label": "Rain alert chance",
+          "description": "Minimum chance of rain or snow, in percent, that triggers the alert"
         },
         "weather-refresh-interval": {
           "description": "How often to refresh weather data (minutes)",
           "label": "Refresh Interval"
         },
+        "weather-temperature-unit": {
+          "description": "Temperature unit; follows Units unless set",
+          "label": "Temperature"
+        },
         "weather-unit": {
           "description": "Unit system for weather display",
           "label": "Units"
+        },
+        "weather-wind-unit": {
+          "description": "Wind speed unit; follows Units unless set",
+          "label": "Wind speed"
         }
       },
       "shared": {
@@ -3945,6 +4057,24 @@
         "transitions": {
           "description": "Effects available when changing wallpaper (one is picked at random per change)",
           "label": "Transition Effects"
+        }
+      },
+      "game-mode": {
+        "auto-detect": {
+          "label": "Game mode: detect games",
+          "description": "Turn game mode on while a Steam game (or another app listed in game_mode.apps) is focused"
+        },
+        "dnd": {
+          "label": "Game mode: do not disturb",
+          "description": "Silence notifications while game mode is on"
+        },
+        "inhibit-idle": {
+          "label": "Game mode: block idle",
+          "description": "Hold off idle lock, screen off and suspend while game mode is on"
+        },
+        "require-focus": {
+          "label": "Game mode: only while focused",
+          "description": "End game mode when you switch away from the game; turn off to keep it on while the game is running"
         }
       }
     },
@@ -4748,6 +4878,10 @@
           "taskbar-description": "Only highlight the active workspace on the monitor that has keyboard or pointer focus; active workspaces on other monitors use the occupied color and the inactive capsule style",
           "workspaces-description": "Only highlight the active workspace on the monitor that has keyboard or pointer focus; other monitors show their active workspace as occupied instead"
         },
+        "follow-focused-output": {
+          "description": "Show the windows and workspaces of whichever monitor has focus, instead of this bar's own monitor",
+          "label": "Follow Focused Monitor"
+        },
         "font-family": {
           "description": "Typeface for this widget; leave empty to inherit the bar font",
           "label": "Font Family"
@@ -5249,6 +5383,14 @@
           "description": "Corner, centered on the edge, or inside the pill",
           "label": "Workspace Label Placement"
         },
+        "label-command": {
+          "label": "Label command",
+          "description": "Shell command run every interval; its first line of output becomes the label. Leave empty for a fixed label."
+        },
+        "label-interval": {
+          "label": "Label refresh (seconds)",
+          "description": "How often the label command runs."
+        },
         "workspace-monitors": {
           "all": "All Monitors",
           "description": "Choose which monitors' workspaces appear in this widget, in order. Leave empty to show only the workspaces from the monitor hosting the bar",
@@ -5490,6 +5632,21 @@
     }
   },
   "weather": {
+    "aqi": {
+      "good": "Good",
+      "hazardous": "Hazardous",
+      "moderate": "Moderate",
+      "unhealthy": "Unhealthy",
+      "unhealthy-sensitive": "Unhealthy for sensitive groups",
+      "very-unhealthy": "Very unhealthy"
+    },
+    "comfort": {
+      "comfortable": "Comfortable",
+      "dry": "Dry",
+      "humid": "Humid",
+      "muggy": "Muggy",
+      "oppressive": "Oppressive"
+    },
     "conditions": {
       "full": {
         "clear-sky": "Clear sky",
@@ -5521,6 +5678,16 @@
     "errors": {
       "fetch-failed": "Weather fetch failed",
       "parse-weather": "Could not parse weather response"
+    },
+    "moon": {
+      "first-quarter": "First Quarter",
+      "full": "Full Moon",
+      "last-quarter": "Last Quarter",
+      "new": "New Moon",
+      "waning-crescent": "Waning Crescent",
+      "waning-gibbous": "Waning Gibbous",
+      "waxing-crescent": "Waxing Crescent",
+      "waxing-gibbous": "Waxing Gibbous"
     }
   },
   "window-switcher": {

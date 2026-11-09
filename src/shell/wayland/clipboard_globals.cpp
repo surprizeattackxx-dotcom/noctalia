@@ -1,6 +1,8 @@
 #include "shell/wayland/clipboard_globals.h"
 
+#include "compositors/compositor_detect.h"
 #include "ext-data-control-v1-client-protocol.h"
+#include "fake-input-client-protocol.h"
 #include "shell/wayland/clipboard_service.h"
 #include "shell/wayland/virtual_keyboard_service.h"
 #include "virtual-keyboard-unstable-v1-client-protocol.h"
@@ -53,6 +55,15 @@ void ClipboardGlobals::onGlobal(
         wl_registry_bind(registry, name, &zwp_virtual_keyboard_manager_v1_interface, bindVersion)
     );
     bindVirtualKeyboardService();
+    return;
+  }
+
+  if (interface == org_kde_kwin_fake_input_interface.name && compositors::isKde()) {
+    const auto bindVersion = std::min<std::uint32_t>(version, 6); // destroy is since 5
+    m_kdeFakeInput = static_cast<org_kde_kwin_fake_input*>(
+        wl_registry_bind(registry, name, &org_kde_kwin_fake_input_interface, bindVersion)
+    );
+    bindVirtualKeyboardService();
   }
 }
 
@@ -67,6 +78,10 @@ void ClipboardGlobals::releaseGlobals() {
     m_dataControlOps->destroyManager(m_dataControlManager);
     m_dataControlManager = nullptr;
     m_dataControlOps = nullptr;
+  }
+  if (m_kdeFakeInput != nullptr) {
+    org_kde_kwin_fake_input_destroy(m_kdeFakeInput);
+    m_kdeFakeInput = nullptr;
   }
   if (m_virtualKeyboardManager != nullptr) {
     zwp_virtual_keyboard_manager_v1_destroy(m_virtualKeyboardManager);
@@ -97,6 +112,10 @@ void ClipboardGlobals::bindClipboardService() {
 
 void ClipboardGlobals::bindVirtualKeyboardService() {
   wl_seat* const seat = m_connection.seat();
+  if (m_virtualKeyboardService != nullptr && m_kdeFakeInput != nullptr) {
+    m_virtualKeyboardService->bindKdeFakeInput(m_kdeFakeInput);
+    return;
+  }
   if (m_virtualKeyboardService == nullptr || m_virtualKeyboardManager == nullptr || seat == nullptr) {
     return;
   }

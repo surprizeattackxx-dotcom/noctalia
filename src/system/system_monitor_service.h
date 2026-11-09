@@ -16,6 +16,12 @@
 #include <unordered_map>
 #include <vector>
 
+// One program's share of GPU memory (NVIDIA only; sampled while a VRAM stat is displayed).
+struct GpuProcessUsage {
+  std::string name;
+  std::uint64_t usedBytes{0};
+};
+
 struct SystemStats {
   struct NetThroughput {
     double rxBytesPerSec{0.0};
@@ -43,6 +49,8 @@ struct SystemStats {
   std::optional<double> gpuUsagePercent;
   std::optional<std::uint64_t> gpuVramUsedBytes;
   std::optional<std::uint64_t> gpuVramTotalBytes;
+  // Largest GPU memory users first, grouped by program name. Empty when the driver cannot list processes.
+  std::vector<GpuProcessUsage> gpuProcesses;
   double netRxBytesPerSec{0.0};
   double netTxBytesPerSec{0.0};
   std::unordered_map<std::string, NetThroughput> netThroughputByInterface;

@@ -3,6 +3,7 @@
 #include "compositors/compositor_platform.h"
 #include "config/config_types.h"
 #include "core/log.h"
+#include "dbus/launcher_entry/launcher_entry_service.h"
 #include "shell/dock/pinned_apps.h"
 #include "shell/wayland/wayland_toplevels.h"
 #include "system/app_identity.h"
@@ -134,6 +135,9 @@ namespace shell::dock {
         if (window.minimizeState.has_value() && window.minimizeState->minimized) {
           ++dockItem.minimizedCount;
         }
+      }
+      if (const auto* launcherEntries = LauncherEntryService::instance(); launcherEntries != nullptr) {
+        dockItem.unreadCount = launcherEntries->countForEntry(entry.id);
       }
       dockItem.allMinimized = !windows.empty() && dockItem.minimizedCount == windows.size();
       if (dockItem.allMinimized) {

@@ -223,6 +223,10 @@ namespace settings::registry {
       case HookKind::BatteryPlugged:
       case HookKind::BatteryPercentageChanged:
       case HookKind::PowerProfileChanged:
+      case HookKind::SystemSuspending:
+      case HookKind::SystemResumed:
+      case HookKind::GameModeStarted:
+      case HookKind::GameModeEnded:
         return "power";
       case HookKind::Count:
         break;
@@ -237,6 +241,12 @@ namespace settings::registry {
           || kind == HookKind::BatteryPlugged
           || kind == HookKind::BatteryPercentageChanged) {
         tags += " battery power";
+      }
+      if (kind == HookKind::GameModeStarted || kind == HookKind::GameModeEnded) {
+        tags += " game gaming steam";
+      }
+      if (kind == HookKind::SystemSuspending || kind == HookKind::SystemResumed) {
+        tags += " suspend resume sleep wake wakeup hibernate";
       }
       if (kind == HookKind::PowerProfileChanged) {
         tags += " power profile performance balanced saver";

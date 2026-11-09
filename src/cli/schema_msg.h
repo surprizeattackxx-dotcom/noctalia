@@ -180,6 +180,18 @@ namespace noctalia::cli {
   inline constexpr std::array kMsgPanelClosePositionals{
       Positional{"id", {}, {}, false, false, false},
   };
+  inline constexpr std::array<std::string_view, 5> kMsgGameModeChoices{"on", "off", "auto", "toggle", "status"};
+  inline constexpr std::array kMsgGameModePositionals{
+      Positional{"state", {}, kMsgGameModeChoices, false, false, false},
+  };
+  inline constexpr std::array<std::string_view, 5> kMsgIdleBehaviorStates{"on", "off", "toggle", "status", "reset"};
+  inline constexpr std::array kMsgIdleBehaviorPositionals{
+      Positional{"name", {}, {}, false, false, false},
+      Positional{"state", {}, kMsgIdleBehaviorStates, false, false, false},
+  };
+  inline constexpr std::array kMsgPanelIsOpenPositionals{
+      Positional{"id", {}, {}, false, false, false},
+  };
   inline constexpr std::array kMsgPanelOpenPositionals{
       Positional{"id", {}, {}, true, false, false},
       Positional{"context", {}, {}, false, false, false},
@@ -261,8 +273,8 @@ namespace noctalia::cli {
       Positional{"path", {}, {}, true, false, false},
   };
   inline constexpr std::array<std::string_view, 3> kMsgWindowSwitcherActionChoices{"close", "hide", "hold"};
-  inline constexpr std::array<std::string_view, 4> kMsgWindowSwitcherScopeChoices{
-      "all", "output", "workspace", "current"
+  inline constexpr std::array<std::string_view, 5> kMsgWindowSwitcherScopeChoices{
+      "all", "output", "workspace", "current", "app"
   };
   inline constexpr std::array<std::string_view, 1> kMsgWindowSwitcherDirectionChoices{"reverse"};
   inline constexpr std::array kMsgWindowSwitcherPositionals{
@@ -677,6 +689,33 @@ namespace noctalia::cli {
         {},
         false
     };
+    inline constexpr Command gameMode{
+        "game-mode", "Show or set game mode: on, off, auto (follow the focused game), toggle or status",
+        {},          {},
+        {},          kMsgGameModePositionals,
+        {},          false
+    };
+    inline constexpr Command idleBehavior{
+        "idle-behavior",
+        "List idle behaviors, or turn one on/off/toggle by name until restart (e.g. idle-behavior lock off); "
+        "'idle-behavior reset' clears the overrides",
+        {},
+        {},
+        {},
+        kMsgIdleBehaviorPositionals,
+        {},
+        false
+    };
+    inline constexpr Command panelIsOpen{
+        "panel-is-open",
+        "Print true or false: whether the named panel (or any panel, when no id is given) is open",
+        {},
+        {},
+        {},
+        kMsgPanelIsOpenPositionals,
+        {},
+        false
+    };
     inline constexpr Command panelOpen{
         "panel-open", "Open a panel by id, optionally with context (e.g. launcher /emo, control-center audio)",
         {},           {},
@@ -1007,7 +1046,10 @@ namespace noctalia::cli {
       msg::osdEnable,
       msg::osdShow,
       msg::osdToggle,
+      msg::gameMode,
+      msg::idleBehavior,
       msg::panelClose,
+      msg::panelIsOpen,
       msg::panelOpen,
       msg::panelToggle,
       msg::plugin,

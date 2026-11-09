@@ -6,6 +6,7 @@ class ClipboardService;
 class VirtualKeyboardService;
 class WaylandConnection;
 struct DataControlOps;
+struct org_kde_kwin_fake_input;
 struct zwp_virtual_keyboard_manager_v1;
 
 // Data-control (ext preferred over wlr) and virtual-keyboard managers, handed to the clipboard and paste services
@@ -28,6 +29,7 @@ private:
   void* m_dataControlManager = nullptr;
   const DataControlOps* m_dataControlOps = nullptr;
   zwp_virtual_keyboard_manager_v1* m_virtualKeyboardManager = nullptr;
+  org_kde_kwin_fake_input* m_kdeFakeInput = nullptr; // KDE only: KWin has no virtual-keyboard protocol
   ClipboardService* m_clipboardService = nullptr;
   VirtualKeyboardService* m_virtualKeyboardService = nullptr;
 };

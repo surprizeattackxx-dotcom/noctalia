@@ -8,6 +8,8 @@ class WaylandConnection;
 struct ext_idle_notification_v1;
 struct ext_idle_notifier_v1;
 struct ext_session_lock_manager_v1;
+struct kde_lockscreen_overlay_v1;
+struct wl_surface;
 struct zwlr_gamma_control_manager_v1;
 struct zwp_idle_inhibit_manager_v1;
 
@@ -24,6 +26,8 @@ public:
   ext_session_lock_manager_v1* sessionLockManager() const noexcept { return m_sessionLockManager; }
   zwlr_gamma_control_manager_v1* gammaControlManager() const noexcept { return m_gammaControlManager; }
   zwp_idle_inhibit_manager_v1* idleInhibitManager() const noexcept { return m_idleInhibitManager; }
+  /// KDE only: marks a surface so KWin shows it above kscreenlocker's lock window. False when unsupported.
+  bool allowSurfaceAboveKdeLockscreen(wl_surface* surface) const;
   bool hasIdleNotifier() const noexcept { return m_idleNotifier != nullptr; }
 
   /// Fired when both `ext_idle_notifier_v1` and `wl_seat` are bound (including late registry globals).
@@ -39,6 +43,7 @@ private:
 
   WaylandConnection& m_connection;
   ext_session_lock_manager_v1* m_sessionLockManager = nullptr;
+  kde_lockscreen_overlay_v1* m_kdeLockscreenOverlay = nullptr;
   ext_idle_notifier_v1* m_idleNotifier = nullptr;
   zwp_idle_inhibit_manager_v1* m_idleInhibitManager = nullptr;
   zwlr_gamma_control_manager_v1* m_gammaControlManager = nullptr;

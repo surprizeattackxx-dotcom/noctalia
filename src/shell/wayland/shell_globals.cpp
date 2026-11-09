@@ -1,8 +1,10 @@
 #include "shell/wayland/shell_globals.h"
 
+#include "compositors/compositor_detect.h"
 #include "ext-idle-notify-v1-client-protocol.h"
 #include "ext-session-lock-v1-client-protocol.h"
 #include "idle-inhibit-unstable-v1-client-protocol.h"
+#include "kde-lockscreen-overlay-v1-client-protocol.h"
 #include "wayland/wayland_connection.h"
 #include "wlr-gamma-control-unstable-v1-client-protocol.h"
 
@@ -53,6 +55,13 @@ void ShellGlobals::onGlobal(
     return;
   }
 
+  if (interface == kde_lockscreen_overlay_v1_interface.name && compositors::isKde()) {
+    m_kdeLockscreenOverlay = static_cast<kde_lockscreen_overlay_v1*>(
+        wl_registry_bind(registry, name, &kde_lockscreen_overlay_v1_interface, 1)
+    );
+    return;
+  }
+
   if (interface == zwlr_gamma_control_manager_v1_interface.name) {
     const auto bindVersion = std::min(version, kGammaControlManagerVersion);
     m_gammaControlManager = static_cast<zwlr_gamma_control_manager_v1*>(
@@ -66,6 +75,10 @@ void ShellGlobals::releaseGlobals() {
     ext_session_lock_manager_v1_destroy(m_sessionLockManager);
     m_sessionLockManager = nullptr;
   }
+  if (m_kdeLockscreenOverlay != nullptr) {
+    kde_lockscreen_overlay_v1_destroy(m_kdeLockscreenOverlay);
+    m_kdeLockscreenOverlay = nullptr;
+  }
   if (m_idleNotifier != nullptr) {
     ext_idle_notifier_v1_destroy(m_idleNotifier);
     m_idleNotifier = nullptr;
@@ -78,6 +91,14 @@ void ShellGlobals::releaseGlobals() {
     zwlr_gamma_control_manager_v1_destroy(m_gammaControlManager);
     m_gammaControlManager = nullptr;
   }
+}
+
+bool ShellGlobals::allowSurfaceAboveKdeLockscreen(wl_surface* surface) const {
+  if (m_kdeLockscreenOverlay == nullptr || surface == nullptr) {
+    return false;
+  }
+  kde_lockscreen_overlay_v1_allow(m_kdeLockscreenOverlay, surface);
+  return true;
 }
 
 void ShellGlobals::setIdleCapabilitiesReadyCallback(ChangeCallback callback) {
