@@ -1,5 +1,6 @@
 #include "shell/switcher/window_switcher.h"
 
+#include "capture/kwin_window_capture.h"
 #include "capture/toplevel_thumbnail_capture.h"
 #include "compositors/compositor_detect.h"
 #include "compositors/compositor_platform.h"
@@ -685,6 +686,20 @@ void WindowSwitcher::initialize(
   m_thumbnailCapture = std::make_unique<ToplevelThumbnailCapture>(wayland);
 }
 
+void WindowSwitcher::setSessionBus(SessionBus* bus) {
+  m_kwinCapture.reset();
+  if (bus == nullptr || !compositors::isKde()) {
+    return;
+  }
+  try {
+    m_kwinCapture = std::make_unique<KwinWindowCapture>(*bus);
+  } catch (const std::exception& e) {
+    kLog.warn("KWin window capture unavailable: {}", e.what());
+  }
+}
+
+bool WindowSwitcher::kwinCaptureUsable() const { return m_kwinCapture != nullptr && m_kwinCapture->available(); }
+
 void WindowSwitcher::registerIpc(IpcService& ipc) {
   ipc.bind(noctalia::cli::msg::windowSwitcher, [this](const std::string& args) -> std::string {
     const std::vector<std::string> words = noctalia::ipc::splitWords(args);
@@ -1024,7 +1039,9 @@ void WindowSwitcher::enqueueMissingThumbnailCaptures() {
   if (m_config != nullptr && m_config->config().shell.windowSwitcher.style == ShellConfig::WindowSwitcherStyle::Icons) {
     return;
   }
-  if (!m_active || m_wayland == nullptr || m_thumbnailCapture == nullptr || !m_thumbnailCapture->available()) {
+  const bool extCapture = m_thumbnailCapture != nullptr && m_thumbnailCapture->available();
+  const bool kwinCapture = kwinCaptureUsable();
+  if (!m_active || m_wayland == nullptr || (!extCapture && !kwinCapture)) {
     return;
   }
 
@@ -1037,7 +1054,7 @@ void WindowSwitcher::enqueueMissingThumbnailCaptures() {
   m_thumbnailTarget = target;
 
   std::vector<bool> queued(m_windows.size(), false);
-  auto enqueue = [this, &queued, target](std::size_t index) {
+  auto enqueue = [this, &queued, target, extCapture, kwinCapture](std::size_t index) {
     if (index >= m_windows.size() || queued[index]) {
       return;
     }
@@ -1045,8 +1062,11 @@ void WindowSwitcher::enqueueMissingThumbnailCaptures() {
     const WindowSwitcherEntry& entry = m_windows[index];
     const std::string key = identityKeyForEntry(entry);
     const bool needsCapture = entry.thumbnailTargetWidth < target.width;
+    const bool viaExt = extCapture && entry.captureHandle != 0;
+    // KWin names a window by its internal id, which the KWin bridge reports as "{uuid}".
+    const bool viaKwin = !viaExt && kwinCapture && entry.windowId.starts_with('{');
     if (key.empty()
-        || entry.captureHandle == 0
+        || (!viaExt && !viaKwin)
         || !needsCapture
         || key == m_inFlightThumbnailKey
         || (entry.minimizeState.has_value() && entry.minimizeState->minimized)) {
@@ -1059,7 +1079,12 @@ void WindowSwitcher::enqueueMissingThumbnailCaptures() {
       return;
     }
     m_thumbnailQueue.push_back(
-        ThumbnailRequest{.windowKey = key, .captureHandle = entry.captureHandle, .target = target}
+        ThumbnailRequest{
+            .windowKey = key,
+            .captureHandle = viaExt ? entry.captureHandle : 0,
+            .kwinWindowId = viaKwin ? entry.windowId : std::string{},
+            .target = target,
+        }
     );
   };
   if (m_selectedIndex < m_windows.size()) {
@@ -1078,7 +1103,10 @@ void WindowSwitcher::enqueueMissingThumbnailCaptures() {
 }
 
 void WindowSwitcher::captureNextThumbnail() {
-  if (!m_active || m_wayland == nullptr || m_thumbnailCapture == nullptr || m_thumbnailCapture->busy()) {
+  if (!m_active
+      || m_wayland == nullptr
+      || (m_thumbnailCapture != nullptr && m_thumbnailCapture->busy())
+      || (m_kwinCapture != nullptr && m_kwinCapture->busy())) {
     return;
   }
 
@@ -1092,39 +1120,48 @@ void WindowSwitcher::captureNextThumbnail() {
         || (foundWindow->minimizeState.has_value() && foundWindow->minimizeState->minimized)) {
       continue;
     }
+    const bool viaKwin = !request.kwinWindowId.empty();
     auto* handle = reinterpret_cast<ext_foreign_toplevel_handle_v1*>(request.captureHandle);
-    bool handleIsLive = false;
-    m_platform->foreignToplevels().visitExtToplevelHandles([&](ext_foreign_toplevel_handle_v1* live) {
-      handleIsLive |= live == handle;
-    });
-    if (!handleIsLive) {
-      continue;
+    if (viaKwin) {
+      if (!kwinCaptureUsable()) {
+        continue;
+      }
+    } else {
+      bool handleIsLive = false;
+      m_platform->foreignToplevels().visitExtToplevelHandles([&](ext_foreign_toplevel_handle_v1* live) {
+        handleIsLive |= live == handle;
+      });
+      if (!handleIsLive || m_thumbnailCapture == nullptr) {
+        continue;
+      }
     }
 
     m_inFlightThumbnailKey = request.windowKey;
-    m_thumbnailCapture->capture(
-        handle, request.target.width, request.target.height,
-        [this, windowKey = std::move(request.windowKey),
-         target = request.target](std::optional<ScreencopyImage> image, std::string error) {
-          if (!error.empty()) {
-            kLog.debug("thumbnail capture skipped for {}: {}", windowKey, error);
-          } else if (m_active && image.has_value()) {
-            auto thumbnail = std::make_shared<ScreencopyImage>(std::move(*image));
-            for (auto& entry : m_windows) {
-              if (identityKeyForEntry(entry) == windowKey && target.width >= entry.thumbnailTargetWidth) {
-                entry.thumbnail = thumbnail;
-                entry.thumbnailTargetWidth = target.width;
-              }
-            }
-            if (m_instance != nullptr) {
-              m_instance->contentSyncPending = true;
-            }
-            requestSceneUpdate();
+    auto onCaptured = [this, windowKey = std::move(request.windowKey),
+                       target = request.target](std::optional<ScreencopyImage> image, std::string error) {
+      if (!error.empty()) {
+        kLog.debug("thumbnail capture skipped for {}: {}", windowKey, error);
+      } else if (m_active && image.has_value()) {
+        auto thumbnail = std::make_shared<ScreencopyImage>(std::move(*image));
+        for (auto& entry : m_windows) {
+          if (identityKeyForEntry(entry) == windowKey && target.width >= entry.thumbnailTargetWidth) {
+            entry.thumbnail = thumbnail;
+            entry.thumbnailTargetWidth = target.width;
           }
-          m_inFlightThumbnailKey.clear();
-          captureNextThumbnail();
         }
-    );
+        if (m_instance != nullptr) {
+          m_instance->contentSyncPending = true;
+        }
+        requestSceneUpdate();
+      }
+      m_inFlightThumbnailKey.clear();
+      captureNextThumbnail();
+    };
+    if (viaKwin) {
+      m_kwinCapture->capture(request.kwinWindowId, request.target.width, request.target.height, std::move(onCaptured));
+    } else {
+      m_thumbnailCapture->capture(handle, request.target.width, request.target.height, std::move(onCaptured));
+    }
     return;
   }
 }
@@ -1135,6 +1172,9 @@ void WindowSwitcher::cancelThumbnailCaptures() {
   m_inFlightThumbnailKey.clear();
   if (m_thumbnailCapture != nullptr) {
     m_thumbnailCapture->cancelInFlight();
+  }
+  if (m_kwinCapture != nullptr) {
+    m_kwinCapture->cancelInFlight();
   }
 }
 

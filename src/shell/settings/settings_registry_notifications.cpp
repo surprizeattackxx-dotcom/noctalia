@@ -374,6 +374,23 @@ namespace settings::registry {
       entries.push_back(std::move(e));
     }
     entries.push_back(makeEntry(
+        SettingsSection::Notifications, "quiet-hours", tr("settings.schema.notifications.quiet-hours.label"),
+        tr("settings.schema.notifications.quiet-hours.description"), {"notification", "quiet_hours"},
+        ToggleSetting{cfg.notification.quietHours}, "dnd do not disturb schedule quiet hours night silence"
+    ));
+    entries.push_back(makeEntry(
+        SettingsSection::Notifications, "quiet-hours", tr("settings.schema.notifications.quiet-hours-start.label"),
+        tr("settings.schema.notifications.quiet-hours-start.description"), {"notification", "quiet_hours_start"},
+        TextSetting{.value = cfg.notification.quietHoursStart, .placeholder = "22:00", .browseFileExtensions = {}},
+        "dnd do not disturb schedule quiet hours start time"
+    ));
+    entries.push_back(makeEntry(
+        SettingsSection::Notifications, "quiet-hours", tr("settings.schema.notifications.quiet-hours-end.label"),
+        tr("settings.schema.notifications.quiet-hours-end.description"), {"notification", "quiet_hours_end"},
+        TextSetting{.value = cfg.notification.quietHoursEnd, .placeholder = "07:00", .browseFileExtensions = {}},
+        "dnd do not disturb schedule quiet hours end time"
+    ));
+    entries.push_back(makeEntry(
         SettingsSection::Notifications, "history", tr("settings.schema.notifications.group-by-app.label"),
         tr("settings.schema.notifications.group-by-app.description"), {"notification", "group_by_app"},
         ToggleSetting{cfg.notification.groupByApp}, "notification history group-by-app"

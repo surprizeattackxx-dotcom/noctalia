@@ -44,7 +44,9 @@
 #include "launcher/session_provider.h"
 #include "launcher/wallpaper_provider.h"
 #include "launcher/window_provider.h"
+#include "notification/job_progress.h"
 #include "notification/notifications.h"
+#include "notification/quiet_hours.h"
 #include "pipewire/pipewire_service.h"
 #include "pipewire/pipewire_spectrum.h"
 #include "pipewire/sound_player.h"
@@ -92,6 +94,7 @@
 #include <cmath>
 #include <csignal>
 #include <cstdint>
+#include <ctime>
 #include <filesystem>
 #include <limits>
 #include <optional>
@@ -147,24 +150,44 @@ void Application::scheduleNotificationShellRefresh() {
   });
 }
 
-void Application::syncLockScreenDoNotDisturb() {
-  const bool shouldEnable = m_lockScreen.isActive() && m_configService.config().lockscreen.dnd;
-  if (shouldEnable) {
-    if (!m_notificationManager.doNotDisturb()) {
-      m_lockScreenAutoDnd = true;
-      m_notificationManager.setDoNotDisturb(true);
+void Application::syncQuietHours() {
+  const NotificationConfig& cfg = m_configService.config().notification;
+  bool inside = false;
+  if (cfg.quietHours) {
+    const auto start = quiet_hours::parseClockMinutes(cfg.quietHoursStart);
+    const auto end = quiet_hours::parseClockMinutes(cfg.quietHoursEnd);
+    if (start.has_value() && end.has_value()) {
+      const std::time_t now = std::time(nullptr);
+      std::tm local{};
+      localtime_r(&now, &local);
+      inside = quiet_hours::contains(*start, *end, local.tm_hour * 60 + local.tm_min);
     }
+  }
+  if (inside == m_quietHoursActive) {
     return;
   }
-  if (m_lockScreenAutoDnd) {
-    m_lockScreenAutoDnd = false;
-    m_notificationManager.setDoNotDisturb(false);
-  }
+  m_quietHoursActive = inside;
+
+  setAutomaticDoNotDisturb(AutomaticDndState::Owner::QuietHours, inside);
+  // Report the schedule edge, not a DND-off transition: game/lock/manual requests may remain.
+  kLog.info("quiet hours {}", inside ? "started" : "ended");
+}
+
+void Application::setAutomaticDoNotDisturb(AutomaticDndState::Owner owner, bool active) {
+  const bool enabled = m_automaticDnd.setOwner(owner, active, m_notificationManager.doNotDisturb());
+  m_notificationManager.setDoNotDisturb(enabled);
+}
+
+void Application::syncLockScreenDoNotDisturb() {
+  setAutomaticDoNotDisturb(
+      AutomaticDndState::Owner::LockScreen, m_lockScreen.isActive() && m_configService.config().lockscreen.dnd
+  );
 }
 
 void Application::syncNotificationDaemon() {
   if (m_bus == nullptr) {
     m_notificationPollSource.setDbusService(nullptr);
+    m_kdeJobViewServer.reset();
     m_notificationDbus.reset();
     m_notificationDaemonEnabled.reset();
     m_notificationDaemonInitFailed = false;
@@ -180,6 +203,7 @@ void Application::syncNotificationDaemon() {
       kLog.info("notification daemon disabled by config");
     }
     m_notificationPollSource.setDbusService(nullptr);
+    m_kdeJobViewServer.reset();
     m_notificationDbus.reset();
     m_notificationDaemonInitFailed = false;
     return;
@@ -192,6 +216,7 @@ void Application::syncNotificationDaemon() {
     }
     kLog.info("notification daemon connection lost; re-registering");
     m_notificationPollSource.setDbusService(nullptr);
+    m_kdeJobViewServer.reset();
     m_notificationDbus.reset();
   }
 
@@ -204,6 +229,14 @@ void Application::syncNotificationDaemon() {
     m_notificationPollSource.setDbusService(m_notificationDbus.get());
     m_notificationDaemonInitFailed = false;
     kLog.info("listening on org.freedesktop.Notifications");
+    if (compositors::isKde()) {
+      try {
+        JobProgress::instance().setChangeCallback([this] { m_bar.refresh(); });
+        m_kdeJobViewServer = std::make_unique<KdeJobViewServer>(*m_bus, m_notificationManager);
+      } catch (const std::exception& e) {
+        kLog.warn("KDE job progress unavailable: {}", e.what());
+      }
+    }
   } catch (const std::exception& ownerError) {
     if (compositors::isKde()) {
       try {
@@ -214,6 +247,7 @@ void Application::syncNotificationDaemon() {
         return;
       } catch (const std::exception& kdeError) {
         kLog.warn("notifications disabled: {}", kdeError.what());
+        m_kdeJobViewServer.reset();
         m_notificationDbus.reset();
         m_notificationPollSource.setDbusService(nullptr);
         m_notificationDaemonInitFailed = true;
@@ -225,6 +259,7 @@ void Application::syncNotificationDaemon() {
     }
 
     kLog.warn("notifications disabled: {}", ownerError.what());
+    m_kdeJobViewServer.reset();
     m_notificationDbus.reset();
     m_notificationPollSource.setDbusService(nullptr);
     m_notificationDaemonInitFailed = true;
