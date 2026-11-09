@@ -283,6 +283,7 @@
   "control-center": {
     "audio": {
       "application-volumes": "Application Volumes",
+      "card-profile": "Card profile",
       "choose-effects-profile": "Choose a profile",
       "default-device": "Default device",
       "effects-profile": "Effects",
@@ -295,6 +296,7 @@
       "no-output-devices": "No output devices",
       "no-output-devices-body": "No playback sinks are currently available.",
       "no-output-selected": "No output device selected",
+      "other-devices": "Other Devices",
       "output-device-prefix": "Output",
       "unavailable-body": "PipeWire is not active.",
       "unavailable-title": "Audio unavailable"

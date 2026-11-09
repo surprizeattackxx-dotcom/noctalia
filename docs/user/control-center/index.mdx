@@ -113,6 +113,8 @@ show_visualizer = true
 
 The Audio tab groups PipeWire output, input, device, and stream controls. Use it for volume changes, muting, selecting devices, and inspecting application streams without opening an external mixer.
 
+Below the application streams, **Other Devices** lists every output and input that is not the current default, each with its own volume slider and mute button, so you can mix a capture card or a second output without making it the default. The output and input menus (the ⋮ button) also list the profiles of the sound card behind the current device, for example Analog Stereo Duplex versus a Digital Stereo (HDMI) output; picking one runs `pactl set-card-profile`. Unavailable profiles, such as an unplugged HDMI port, are hidden. Card profiles need `pactl` (pipewire-pulse).
+
 ## Monitor
 
 The Monitor tab exposes brightness controls when Noctalia has a controllable backlight for the display. If no writable brightness device is available, the tab remains available but has no write controls to expose.

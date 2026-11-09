@@ -14,6 +14,7 @@
 #include "config/config_service.h"
 #include "core/files/file_watcher.h"
 #include "core/timer_manager.h"
+#include "dbus/launcher_entry/launcher_entry_service.h"
 #include "dbus/network/external_ip_service.h"
 #include "dbus/notification/notification_poll_source.h"
 #include "dbus/secret/secret_collection_probe.h"
@@ -286,6 +287,7 @@ private:
   std::unique_ptr<AccountsService> m_accountsService;
   std::unique_ptr<ScreenSaverService> m_screenSaverService;
   std::unique_ptr<compositors::kde::KdeLockWatcher> m_kdeLockWatcher;
+  std::unique_ptr<LauncherEntryService> m_launcherEntries;
   std::unique_ptr<ScreenSaverPollSource> m_screenSaverPollSource;
   std::unique_ptr<SystemMonitorService> m_systemMonitor;
   std::unique_ptr<DebugService> m_debugService;

@@ -81,6 +81,8 @@ private:
   void syncValueLabelWidths(Renderer& renderer);
   void syncProgramVolumeRows();
   void queueProgramSinkVolume(std::uint32_t id, float value);
+  void queueDeviceVolume(std::uint32_t id, bool isSink, float value);
+  void flushPendingDeviceVolume();
   void flushPendingProgramVolumes(bool force = false);
   [[nodiscard]] float sliderMaxPercent() const;
   void flushPendingVolumes(bool force = false);
@@ -108,6 +110,11 @@ private:
   ScrollView* m_programScroll = nullptr;
   Flex* m_programList = nullptr;
   std::vector<Flex*> m_programRows;
+  std::vector<Flex*> m_deviceRows;
+  Timer m_deviceDebounceTimer;
+  std::uint32_t m_pendingDeviceId = 0;
+  bool m_pendingDeviceIsSink = true;
+  float m_pendingDeviceVolume = -1.0F;
   std::string m_lastProgramListKey;
   float m_lastProgramSliderMax = -1.0F;
   std::string m_lastEffectsProfileListKey;
@@ -118,6 +125,8 @@ private:
   std::unique_ptr<ContextMenuPopup> m_deviceMenuPopup;
   DeviceVolumeCardState* m_openDeviceMenuCard = nullptr;
   std::uint32_t m_openProgramRoutingMenuStreamId = 0;
+  std::string m_menuCardName;
+  std::vector<std::string> m_menuCardProfiles;
 
   float m_lastOutputWidth = -1.0F;
   float m_lastInputWidth = -1.0F;

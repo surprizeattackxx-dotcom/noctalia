@@ -31,6 +31,8 @@ namespace shell::dock {
     Box* minimizedIndicator = nullptr;
     Box* badge = nullptr;
     Label* badgeLabel = nullptr;
+    Box* unreadBadge = nullptr; // app-published unread count, on the opposite corner from the window-count badge
+    Label* unreadBadgeLabel = nullptr;
     std::string tooltipText;
     Image* iconImage = nullptr;
     Glyph* iconGlyph = nullptr;

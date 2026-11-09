@@ -1891,6 +1891,7 @@ void PipeWireService::rebuildState() {
     node.volume = nd->volume;
     node.muted = nd->muted;
     node.channelCount = nd->channelCount;
+    node.deviceId = nd->deviceId;
 
     // Availability from the active output/input route: a device with a matching route that is
     // explicitly unavailable and no available alternative is hidden. Cards that report "unknown"

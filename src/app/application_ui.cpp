@@ -1028,6 +1028,11 @@ void Application::initWidgetControllersAndCallbacks() {
   auto shouldRefreshControlCenter = [this] { return m_panelManager.isOpenPanel("control-center"); };
 
   m_dock.initialize(m_compositorPlatform, &m_configService, &m_renderContext);
+  if (m_bus != nullptr) {
+    // Unread counts that apps publish through the Unity launcher API show as a badge on their dock icon.
+    m_launcherEntries = std::make_unique<LauncherEntryService>(*m_bus);
+    m_launcherEntries->setChangeCallback([this] { m_dock.refresh(); });
+  }
   const DesktopWidgetScriptDeps desktopWidgetScriptDeps{
       .scriptApi = &m_scriptApi,
       .fileWatcher = &m_fileWatcher,
