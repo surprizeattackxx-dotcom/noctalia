@@ -4,6 +4,19 @@
 #include <format>
 
 namespace FormatUnits {
+
+  namespace {
+    bool g_fahrenheit = false;
+  } // namespace
+
+  void setTemperatureFahrenheit(bool fahrenheit) { g_fahrenheit = fahrenheit; }
+
+  std::string formatTemperatureFromCelsius(double celsius) {
+    if (g_fahrenheit) {
+      return std::format("{:.0F}\u00b0F", (celsius * 1.8) + 32.0);
+    }
+    return std::format("{:.0F}\u00b0C", celsius);
+  }
   namespace {
 
     constexpr double kMibPerGib = 1024.0;

@@ -33,6 +33,14 @@ void registerSessionIpc(IpcService& ipc, SessionActionRunner& runner, LockScreen
     }
 
     const std::string& ipcAction = parts[0];
+    if (ipcAction == "lock-prompt") {
+      // Display-only mirror of KDE's greeter (which owns the keyboard): "chars N", "auth", "fail", "clear".
+      return lockScreen.mirrorKdePrompt(
+                 parts.size() > 1 ? parts[1] : std::string{}, parts.size() > 2 ? parts[2] : std::string{}
+             )
+          ? "ok\n"
+          : "error: no lock overlay active or bad argument\n";
+    }
     const auto action = session_action::canonicalActionName(ipcAction);
     if (!action.has_value()) {
       return unknownSessionActionError(ipcAction);

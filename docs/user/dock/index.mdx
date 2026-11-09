@@ -137,6 +137,10 @@ Left-click an app with no open windows to launch it. With one window, left-click
 
 Minimised windows remain running and stay in window counts. A small dash marks an app when all its windows are minimised, including when `show_dots = false`. Apps with mixed window states keep their usual appearance; the tooltip reports how many windows are minimised. Right-click for per-window **Minimise** or **Restore** actions when available.
 
+Apps that publish an unread count through the Unity launcher API (`com.canonical.Unity.LauncherEntry`, used by Discord, Telegram, Thunderbird and others) get a red badge with that count on the top corner opposite the window-count badge.
+
+Middle-click an app icon to open a new window of that app even when it is already running. Apps that declare a `new-window` desktop action use it; others get a normal launch.
+
 Minimise features require a connected compositor backend reporting the window state. No additional configuration is needed.
 
 ## Magnification

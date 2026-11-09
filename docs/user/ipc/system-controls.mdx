@@ -108,6 +108,16 @@ Wi-Fi and Bluetooth IPC commands show a short OSD when they change the state.
 
 Caffeine IPC commands show a short OSD when they change the state.
 
+## Idle behaviors
+
+| Action                  | Command                                              | Description                                                                          |
+| ----------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| List behaviors          | <IpcCommand command="idle-behavior" />               | One line per behavior: name, on/off, timeout and action.                             |
+| Turn one on or off      | <IpcCommand command="idle-behavior lock off" />      | `on`, `off`, `toggle` or `status` for the behavior named `lock` (any behavior name). |
+| Clear runtime overrides | <IpcCommand command="idle-behavior reset" />         | Go back to what the config says.                                                     |
+
+The switch sits on top of the config and lasts until Noctalia restarts or you `reset`; it never writes the config file. Use it for "keep the screen on but still lock" style toggles: `idle-behavior suspend off` stops auto-suspend, `idle-behavior lock off` stops auto-lock.
+
 ## Power profile
 
 Requires `org.freedesktop.UPower.PowerProfiles` (same as the Control Center home shortcut). Profile ids come from the compositor/session; common values are `performance`, `balanced`, and `power-saver`.

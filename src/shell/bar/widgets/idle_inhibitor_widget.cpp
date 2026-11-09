@@ -14,7 +14,8 @@ namespace {
 
 } // namespace
 
-IdleInhibitorWidget::IdleInhibitorWidget(IdleInhibitor* inhibitor) : m_inhibitor(inhibitor) {}
+IdleInhibitorWidget::IdleInhibitorWidget(IdleInhibitor* inhibitor, Options options)
+    : m_inhibitor(inhibitor), m_hideWhenOff(options.hideWhenOff) {}
 
 void IdleInhibitorWidget::create() {
   auto area = ui::inputArea({});
@@ -58,6 +59,11 @@ void IdleInhibitorWidget::syncState(Renderer& renderer) {
 
   if (available == m_lastAvailable && enabled == m_lastEnabled) {
     return;
+  }
+  if (auto* node = root(); node != nullptr) {
+    const bool show = !m_hideWhenOff || enabled;
+    node->setVisible(show);
+    node->setParticipatesInLayout(show);
   }
 
   m_lastAvailable = available;

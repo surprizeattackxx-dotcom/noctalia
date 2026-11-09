@@ -13,6 +13,7 @@
 #include "shell/bar/widgets/bluetooth_widget_definition.h"
 #include "shell/bar/widgets/brightness_widget.h"
 #include "shell/bar/widgets/brightness_widget_definition.h"
+#include "shell/bar/widgets/caffeine_widget_definition.h"
 #include "shell/bar/widgets/clipboard_widget.h"
 #include "shell/bar/widgets/clipboard_widget_definition.h"
 #include "shell/bar/widgets/clock_widget.h"
@@ -182,7 +183,10 @@ std::unique_ptr<Widget> WidgetFactory::create(
             );
           }},
       {"caffeine", [](const WidgetFactory& f, const BuiltinWidgetContext& context) {
-            return createWidget<IdleInhibitorWidget>(context.contentScale, f.m_idleInhibitor);
+            return createWidget<IdleInhibitorWidget>(
+                context.contentScale, f.m_idleInhibitor,
+                caffeineWidgetDefinition().resolve(context.config, context.settingContext)
+            );
           }},
       {"clipboard", [](const WidgetFactory& f, const BuiltinWidgetContext& context) {
             if (!f.m_config.shell.clipboardEnabled) {
