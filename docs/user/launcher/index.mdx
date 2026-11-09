@@ -38,6 +38,8 @@ track_usage = true
 
 In the Full layout, the view tabs sit on the left, with buttons on the right to toggle usage-based ordering and grid view, followed by the optional Settings shortcut. The grid/list button shows the layout it will switch to: a list icon while grid view is active, and a grid icon while list view is active. The ordering button also shows the ordering it will switch to: an alphabetical icon while frequency sorting is active, and a frequency icon while default ordering is active. Turning usage ordering off keeps recording frequency and recent launches. The selected result stays visible when you change ordering. The ordering button appears for All, Categories, and search results while `track_usage` is enabled. It is hidden for Recent, Pinned, Providers, and session actions, where changing the order does not apply. The ordering and grid buttons change the same persistent options shown under **Settings → Panels → Launcher**. While Recent has entries, a refresh button at the start of those buttons clears the recently opened list (it keeps the usage counts behind frequency ordering; Settings has a full usage reset). `noctalia msg launcher-clear-recent` does the same from a script or a KDE shortcut.
 
+`Alt`+`1` through `Alt`+`9` activate the first nine results of the current list directly, without moving the selection first. Plain digits still go to the search field.
+
 The Full layout puts the available `default_view` tab first, keeping the other tabs in their usual relative order and Providers last. For example, `default_view = "all"` orders the tabs as All, Recent, Pinned, Categories, Providers when all views are available. The Simple layout keeps its existing chip order.
 
 ## How search works

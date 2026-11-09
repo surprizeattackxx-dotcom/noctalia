@@ -107,6 +107,35 @@ show_visualizer = true
 | ----------------- | ---- | ------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `show_visualizer` | bool | `true`  | Show the PipeWire audio visualizer beside the playback controls. Also toggled from the visualizer button in the tab header. |
 
+## Home
+
+```toml
+[control_center.home]
+show_user_card = true
+show_media_card = true
+show_date_time_card = true
+show_weather = true
+hide_media_when_idle = false
+show_user_host = true
+show_uptime = true
+show_version = true
+show_compositor = true
+```
+
+| Option                | Type | Default | Description                                                                                          |
+| --------------------- | ---- | ------- | ---------------------------------------------------------------------------------------------------- |
+| `show_user_card`      | bool | `true`  | Show the avatar and wallpaper card at the top of the Home tab                                        |
+| `show_media_card`     | bool | `true`  | Show the now-playing card                                                                            |
+| `hide_media_when_idle`| bool | `false` | Hide the media card while no player is active; it returns when one appears                           |
+| `show_date_time_card` | bool | `true`  | Show the clock and date card                                                                         |
+| `show_weather`        | bool | `true`  | Show the weather line in the date and time card (needs weather enabled)                              |
+| `show_user_host`      | bool | `true`  | Show the `user@host` line on the user card                                                           |
+| `show_uptime`         | bool | `true`  | Show the uptime line on the user card                                                                |
+| `show_version`        | bool | `true`  | Show the Noctalia version line on the user card                                                      |
+| `show_compositor`     | bool | `true`  | Show the compositor line on the user card                                                            |
+
+Hidden cards give their space to the remaining ones. Shortcuts stay as they are. If the media and date/time cards are both off, the date/time card stays so the shortcuts keep their place.
+
 ## Audio
 
 The Audio tab groups PipeWire output, input, device, and stream controls. Use it for volume changes, muting, selecting devices, and inspecting application streams without opening an external mixer.

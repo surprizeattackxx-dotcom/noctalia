@@ -80,6 +80,7 @@ private:
   void warnOnOversizedAvatarSource(const std::string& path);
   void syncScaledFonts();
   void syncShortcuts();
+  void syncCardVisibility();
   void syncHeaderActions();
   void syncAvatarChrome();
   bool resizeMediaArtToCard();
@@ -98,6 +99,7 @@ private:
 
   Flex* m_rootLayout = nullptr;
   Flex* m_bottomRow = nullptr;
+  Flex* m_leftColumn = nullptr;
   Flex* m_dateTimeCard = nullptr;
   Flex* m_mediaCard = nullptr;
   Flex* m_mediaText = nullptr;
