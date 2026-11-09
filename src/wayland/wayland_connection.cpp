@@ -18,6 +18,7 @@
 #include "hyprland-focus-grab-v1-client-protocol.h"
 #include "hyprland-toplevel-mapping-v1-client-protocol.h"
 #include "idle-inhibit-unstable-v1-client-protocol.h"
+#include "kde-lockscreen-overlay-v1-client-protocol.h"
 #include "org-kde-plasma-virtual-desktop-client-protocol.h"
 #include "text-input-unstable-v3-client-protocol.h"
 #include "viewporter-client-protocol.h"
@@ -1094,6 +1095,14 @@ bool WaylandConnection::hasDwlIpcManager() const noexcept { return m_hasDwlIpcGl
 bool WaylandConnection::hasForeignToplevelManager() const noexcept { return m_hasForeignToplevelManagerGlobal; }
 
 bool WaylandConnection::hasExtForeignToplevelList() const noexcept { return m_hasExtForeignToplevelListGlobal; }
+bool WaylandConnection::allowSurfaceAboveKdeLockscreen(wl_surface* surface) const {
+  if (m_kdeLockscreenOverlay == nullptr || surface == nullptr) {
+    return false;
+  }
+  kde_lockscreen_overlay_v1_allow(m_kdeLockscreenOverlay, surface);
+  return true;
+}
+
 bool WaylandConnection::hasSessionLockManager() const noexcept { return m_sessionLockManager != nullptr; }
 bool WaylandConnection::hasIdleNotifier() const noexcept { return m_idleNotifier != nullptr; }
 bool WaylandConnection::hasIdleInhibitManager() const noexcept { return m_idleInhibitManager != nullptr; }
@@ -1705,6 +1714,13 @@ void WaylandConnection::bindGlobal(
     return;
   }
 
+  if (interfaceName == kde_lockscreen_overlay_v1_interface.name && compositors::isKde()) {
+    m_kdeLockscreenOverlay = static_cast<kde_lockscreen_overlay_v1*>(
+        wl_registry_bind(registry, name, &kde_lockscreen_overlay_v1_interface, 1)
+    );
+    return;
+  }
+
   if (interfaceName == zwlr_gamma_control_manager_v1_interface.name) {
     const auto bindVersion = std::min(version, kGammaControlManagerVersion);
     m_gammaControlManager = static_cast<zwlr_gamma_control_manager_v1*>(
@@ -1934,6 +1950,10 @@ void WaylandConnection::cleanup() {
     m_dataControlOps = nullptr;
   }
 
+  if (m_kdeLockscreenOverlay != nullptr) {
+    kde_lockscreen_overlay_v1_destroy(m_kdeLockscreenOverlay);
+    m_kdeLockscreenOverlay = nullptr;
+  }
   if (m_kdeFakeInput != nullptr) {
     org_kde_kwin_fake_input_destroy(m_kdeFakeInput);
     m_kdeFakeInput = nullptr;

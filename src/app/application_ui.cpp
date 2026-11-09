@@ -315,6 +315,12 @@ void Application::initLockScreenAndSession() {
   if (compositors::isKde() && m_bus != nullptr) {
     // KDE's own screen locker holds the lock; mirror its state into hooks, idle and screen time.
     m_kdeLockWatcher = std::make_unique<compositors::kde::KdeLockWatcher>(*m_bus, [this](bool locked) {
+      if (LockScreen::kdeOverlayEnabled()) {
+        // Show/dismiss Noctalia's lock screen above KDE's locker; its session hooks do the bookkeeping below.
+        if (locked ? m_lockScreen.lockOverlay() : m_lockScreen.endOverlay()) {
+          return;
+        }
+      }
       m_idleManager.setSessionLocked(locked);
       m_screenTimeService.setSessionLocked(locked);
       m_hookManager.fire(locked ? HookKind::SessionLocked : HookKind::SessionUnlocked);
@@ -375,6 +381,9 @@ void Application::initLockScreenAndSession() {
       }
     });
     m_logindService->setUnlockCallback([this] {
+      if (m_lockScreen.endOverlay()) {
+        return; // KDE's locker already unlocked; just dismiss the overlay
+      }
       if (m_lockScreen.isActive()) {
         m_lockScreen.unlock();
       }

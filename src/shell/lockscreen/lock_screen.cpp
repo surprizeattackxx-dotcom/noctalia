@@ -22,6 +22,7 @@
 #include "shell/session/session_action_runner.h"
 #include "shell/wallpaper/wallpaper_geometry.h"
 #include "ui/palette.h"
+#include "util/sys_utils.h"
 #include "wayland/wayland_connection.h"
 #include "wayland/wayland_seat.h"
 
@@ -282,6 +283,59 @@ bool LockScreen::lock() {
   return true;
 }
 
+bool LockScreen::kdeOverlayEnabled() {
+  static const bool enabled = compositors::isKde() && SysUtils::isEnvFlagOn("NOCTALIA_KDE_LOCK_OVERLAY");
+  return enabled;
+}
+
+bool LockScreen::lockOverlay() {
+  if (!kdeOverlayEnabled()
+      || m_wayland == nullptr
+      || m_renderContext == nullptr
+      || m_wayland->layerShell() == nullptr) {
+    return false;
+  }
+  if (isActive()) {
+    return true;
+  }
+  if (!hasUsableOutput(*m_wayland)) {
+    return false;
+  }
+  kLog.info("KDE screen locker is active; showing lock screen overlay");
+  m_overlayMode = true;
+  m_skipKdeUnlockCall = false;
+  m_lockedAtMillis = bootTimeMillis();
+  m_graceAllowed = false;
+  m_transitionSuppressed = true;
+  m_activeTransition.reset();
+  invalidateDesktopCaptures();
+  m_lockPending = true;
+  m_locked = false;
+  clearSensitiveString(m_password);
+  m_status.clear();
+  m_statusIsError = false;
+  syncInstances();
+  if (m_instances.empty()) {
+    kLog.warn("no overlay surface could be created; leaving KDE's lock screen visible");
+    m_overlayMode = false;
+    m_lockPending = false;
+    m_transitionSuppressed = false;
+    return false;
+  }
+  wl_display_flush(m_wayland->display());
+  engageLocked();
+  return true;
+}
+
+bool LockScreen::endOverlay() {
+  if (!m_overlayMode || !isActive()) {
+    return false;
+  }
+  m_skipKdeUnlockCall = true;
+  unlock();
+  return true;
+}
+
 void LockScreen::unlock() {
   m_lockDeferred = false;
   cancelPendingAfterLocked();
@@ -360,6 +414,17 @@ void LockScreen::finishUnlock() {
   // isActive() is false so LockscreenWidgetsController::applyVisibility() hides first.
   if (wasLockedInteractive && m_onSessionUnlocked) {
     m_onSessionUnlocked();
+  }
+
+  if (m_overlayMode) {
+    m_overlayMode = false;
+    if (!m_skipKdeUnlockCall) {
+      kLog.info("password accepted; asking KDE's screen locker to unlock");
+      if (!process::runAsync({"loginctl", "unlock-session"})) {
+        kLog.warn("could not run loginctl unlock-session");
+      }
+    }
+    m_skipKdeUnlockCall = false;
   }
 
   clearInstances();
@@ -900,27 +965,31 @@ void LockScreen::handleLocked(void* data, ext_session_lock_v1* /*lock*/) {
   if (self->m_lock == nullptr || !self->m_lockPending) {
     return;
   }
-  self->m_lockPending = false;
-  self->m_locked = true;
+  self->engageLocked();
+}
+
+void LockScreen::engageLocked() {
+  m_lockPending = false;
+  m_locked = true;
   // Idle status is empty; the surface renders the password hint itself.
-  self->m_status.clear();
-  self->m_statusIsError = false;
-  for (auto& instance : self->m_instances) {
+  m_status.clear();
+  m_statusIsError = false;
+  for (auto& instance : m_instances) {
     instance.surface->setLockedState(true);
-    instance.surface->setOnLogin([self] { self->tryAuthenticate(); });
+    instance.surface->setOnLogin([this] { tryAuthenticate(); });
     instance.surface->startEnterTransition();
   }
 
-  self->armSleepReadyTimeout();
+  armSleepReadyTimeout();
 
-  self->updatePromptOnSurfaces();
-  self->updateIndicatorsOnSurfaces();
-  self->startFingerprint();
+  updatePromptOnSurfaces();
+  updateIndicatorsOnSurfaces();
+  startFingerprint();
   kLog.info("session is locked");
-  if (self->m_onSessionLocked) {
-    self->m_onSessionLocked();
+  if (m_onSessionLocked) {
+    m_onSessionLocked();
   }
-  self->handleSleepReady();
+  handleSleepReady();
 }
 
 void LockScreen::handleFinished(void* data, ext_session_lock_v1* /*lock*/) {

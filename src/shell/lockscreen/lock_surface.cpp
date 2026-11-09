@@ -29,6 +29,7 @@
 #include "util/clamp.h"
 #include "wayland/wayland_connection.h"
 #include "wayland/wayland_seat.h"
+#include "wlr-layer-shell-unstable-v1-client-protocol.h"
 
 #include <algorithm>
 #include <chrono>
@@ -47,6 +48,11 @@ namespace {
 
   const ext_session_lock_surface_v1_listener kLockSurfaceListener = {
       .configure = &LockSurface::handleConfigure,
+  };
+
+  const zwlr_layer_surface_v1_listener kOverlaySurfaceListener = {
+      .configure = &LockSurface::handleOverlayConfigure,
+      .closed = &LockSurface::handleOverlayClosed,
   };
 
   constexpr float kMediaArtSize = lockscreen_login_box::kRegularMediaArtSize;
@@ -584,6 +590,10 @@ LockSurface::~LockSurface() {
   m_aliveGuard.reset();
   releaseCaptureTextures();
   m_connection.unregisterSurface(m_surface);
+  if (m_overlaySurface != nullptr) {
+    zwlr_layer_surface_v1_destroy(m_overlaySurface);
+    m_overlaySurface = nullptr;
+  }
   if (m_lockSurface != nullptr) {
     // If get_lock_surface raced with the output disappearing server-side, some
     // compositors (e.g. Hyprland) silently drop the request without binding the
@@ -613,7 +623,10 @@ void LockSurface::setLoginBoxServices(
 }
 
 bool LockSurface::initialize(ext_session_lock_v1* lock, wl_output* output, std::int32_t scale) {
-  if (lock == nullptr || output == nullptr || renderContext() == nullptr) {
+  if (output == nullptr || renderContext() == nullptr) {
+    return false;
+  }
+  if (lock == nullptr && m_connection.layerShell() == nullptr) {
     return false;
   }
 
@@ -643,6 +656,41 @@ bool LockSurface::initialize(ext_session_lock_v1* lock, wl_output* output, std::
 
   m_output = output;
   m_connection.registerSurfaceOutput(m_surface, output);
+
+  if (lock == nullptr) {
+    m_overlaySurface = zwlr_layer_shell_v1_get_layer_surface(
+        m_connection.layerShell(), m_surface, output, ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY, "noctalia-lock-overlay"
+    );
+    if (m_overlaySurface == nullptr
+        || zwlr_layer_surface_v1_add_listener(m_overlaySurface, &kOverlaySurfaceListener, this) != 0) {
+      if (m_overlaySurface != nullptr) {
+        zwlr_layer_surface_v1_destroy(m_overlaySurface);
+        m_overlaySurface = nullptr;
+      }
+      destroySurface();
+      return false;
+    }
+    zwlr_layer_surface_v1_set_anchor(
+        m_overlaySurface,
+        ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP
+            | ZWLR_LAYER_SURFACE_V1_ANCHOR_BOTTOM
+            | ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT
+            | ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT
+    );
+    zwlr_layer_surface_v1_set_size(m_overlaySurface, 0, 0);
+    zwlr_layer_surface_v1_set_exclusive_zone(m_overlaySurface, -1);
+    zwlr_layer_surface_v1_set_keyboard_interactivity(
+        m_overlaySurface, ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE
+    );
+    // Must happen while the surface is still unmapped (before the first buffer is attached).
+    if (!m_connection.allowSurfaceAboveKdeLockscreen(m_surface)) {
+      kLog.warn("compositor does not offer kde_lockscreen_overlay_v1; overlay would stay hidden behind the locker");
+    }
+    wl_surface_commit(m_surface);
+    setRunning(true);
+    return true;
+  }
+
   m_lockSurface = ext_session_lock_v1_get_lock_surface(lock, m_surface, output);
   if (m_lockSurface == nullptr) {
     destroySurface();
@@ -1050,6 +1098,24 @@ void LockSurface::handleConfigure(
   }
   ext_session_lock_surface_v1_ack_configure(lockSurface, serial);
   self->Surface::onConfigure(width, height);
+}
+
+void LockSurface::handleOverlayConfigure(
+    void* data, zwlr_layer_surface_v1* layerSurface, std::uint32_t serial, std::uint32_t width, std::uint32_t height
+) {
+  auto* self = static_cast<LockSurface*>(data);
+  self->m_receivedConfigure = true;
+  if (self->width() != width || self->height() != height) {
+    self->invalidateSleepFrame();
+  }
+  zwlr_layer_surface_v1_ack_configure(layerSurface, serial);
+  self->Surface::onConfigure(width, height);
+}
+
+void LockSurface::handleOverlayClosed(void* data, zwlr_layer_surface_v1* /*layerSurface*/) {
+  auto* self = static_cast<LockSurface*>(data);
+  kLog.warn("lock overlay surface closed by compositor");
+  self->setRunning(false);
 }
 
 bool LockSurface::ensureTransitionCaptureTexture() {

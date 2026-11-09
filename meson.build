@@ -395,6 +395,8 @@ foreach _p : [
     'protocols/org-kde-plasma-virtual-desktop.xml'],
   ['fake-input',
     'protocols/fake-input.xml'],
+  ['kde-lockscreen-overlay-v1',
+    'protocols/kde-lockscreen-overlay-v1.xml'],
   ['cursor-shape-v1',
     'protocols/cursor-shape-v1.xml'],
   ['wlr-foreign-toplevel-management-unstable-v1',

@@ -24,6 +24,7 @@
 
 struct ext_session_lock_surface_v1;
 struct ext_session_lock_v1;
+struct zwlr_layer_surface_v1;
 struct wl_output;
 
 class Button;
@@ -53,6 +54,7 @@ public:
 
   using Surface::initialize;
   bool initialize() override { return false; }
+  /// `lock == nullptr` creates a fullscreen overlay layer surface instead (KDE: shown above kscreenlocker).
   bool initialize(ext_session_lock_v1* lock, wl_output* output, std::int32_t scale);
   void setLockedState(bool locked);
   void setPromptState(std::string user, std::string password, std::string status, bool error, bool authenticating);
@@ -103,6 +105,10 @@ public:
       void* data, ext_session_lock_surface_v1* lockSurface, std::uint32_t serial, std::uint32_t width,
       std::uint32_t height
   );
+  static void handleOverlayConfigure(
+      void* data, zwlr_layer_surface_v1* layerSurface, std::uint32_t serial, std::uint32_t width, std::uint32_t height
+  );
+  static void handleOverlayClosed(void* data, zwlr_layer_surface_v1* layerSurface);
 
 protected:
   void render() override;
@@ -155,6 +161,7 @@ private:
   void focusPasswordField();
 
   ext_session_lock_surface_v1* m_lockSurface = nullptr;
+  zwlr_layer_surface_v1* m_overlaySurface = nullptr;
   wl_output* m_output = nullptr;
   bool m_receivedConfigure = false;
   ConfigService* m_config = nullptr;

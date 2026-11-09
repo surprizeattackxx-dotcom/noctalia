@@ -43,6 +43,7 @@ struct ext_workspace_manager_v1;
 struct org_kde_plasma_virtual_desktop_management;
 struct zdwl_ipc_manager_v2;
 struct org_kde_kwin_fake_input;
+struct kde_lockscreen_overlay_v1;
 struct zwp_virtual_keyboard_manager_v1;
 struct zwp_text_input_manager_v3;
 struct hyprland_focus_grab_manager_v1;
@@ -196,6 +197,8 @@ public:
   [[nodiscard]] bool hasForeignToplevelManager() const noexcept;
   [[nodiscard]] bool hasExtForeignToplevelList() const noexcept;
   [[nodiscard]] bool hasSessionLockManager() const noexcept;
+  /// KDE: marks a not-yet-mapped surface as allowed to show above the screen locker. No-op when unavailable.
+  [[nodiscard]] bool allowSurfaceAboveKdeLockscreen(wl_surface* surface) const;
   [[nodiscard]] bool hasIdleNotifier() const noexcept;
   [[nodiscard]] bool hasIdleInhibitManager() const noexcept;
   [[nodiscard]] bool hasFractionalScale() const noexcept;
@@ -363,6 +366,7 @@ private:
   zwp_text_input_manager_v3* m_textInputManager = nullptr;
   zwp_virtual_keyboard_manager_v1* m_virtualKeyboardManager = nullptr;
   org_kde_kwin_fake_input* m_kdeFakeInput = nullptr;
+  kde_lockscreen_overlay_v1* m_kdeLockscreenOverlay = nullptr;
   ClipboardService* m_clipboardService = nullptr;
   TextInputService* m_textInputService = nullptr;
   VirtualKeyboardService* m_virtualKeyboardService = nullptr;

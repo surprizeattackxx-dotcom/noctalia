@@ -53,6 +53,14 @@ public:
       SessionActionRunner* sessionActions, MprisService* mpris, const WeatherService* weather, HttpClient* httpClient
   );
   bool lock();
+  /// KDE: KWin has no ext-session-lock, so kscreenlocker owns the real lock. While it is locked, show this lock
+  /// screen on overlay layer surfaces above it (kde_lockscreen_overlay_v1); a correct password then asks the
+  /// locker to unlock. Returns false (and does nothing) when the overlay cannot be shown.
+  bool lockOverlay();
+  /// KDE: the real locker unlocked by itself; dismiss the overlay without poking the locker again.
+  /// Returns true when an overlay was active.
+  bool endOverlay();
+  [[nodiscard]] static bool kdeOverlayEnabled();
   void primeDesktopCaptures();
   void clearPrimedDesktopCaptures();
   void unlock();
@@ -138,6 +146,7 @@ private:
   void handleTransitionStateChanged();
   void tryFinishAnimatedUnlock();
   void finishUnlock();
+  void engageLocked();
   void notifyLockAborted();
   void resetLockState();
   void clearInstances();
@@ -182,6 +191,8 @@ private:
   bool m_lockPending = false;
   bool m_locked = false;
   bool m_lockStarting = false;
+  bool m_overlayMode = false;
+  bool m_skipKdeUnlockCall = false;
   bool m_desktopCapturesPrimed = false;
   std::uint64_t m_desktopCaptureGeneration = 0;
   bool m_lockDeferred = false;
