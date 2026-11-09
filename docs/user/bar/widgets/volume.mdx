@@ -21,6 +21,7 @@ Shows PipeWire output (speaker) or input (microphone) volume and mute state.
 | `peek`                   | bool   | `false`    | Show only the glyph and reveal the percentage on hover. See [Peek](/noctalia/bar/widgets/#peek)                |
 | `peek_delay_ms`          | int    | `100`      | Hover time before the percentage reveals, from `0` to `2000` ms                                                |
 | `mute_color`             | string | `"error"`  | Color role or hex color for the icon and label when muted                                                      |
+| `hide_label_when_muted`  | bool   | `false`    | Hide the percentage label while the device is muted (the mute icon still shows the state)                      |
 | `hide_when_inactive`     | bool   | `false`    | *(Input only)* Hide the microphone widget while no application is capturing audio                              |
 
 At least one of `show_glyph` or `show_label` must be `true`. With `show_glyph = false`, only the volume percentage is displayed, without icon spacing.
