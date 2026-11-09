@@ -844,6 +844,7 @@
         "recent": "Recent"
       },
       "options": {
+        "clear-recent": "Clear Recent Apps",
         "show-grid": "Show Grid View",
         "show-list": "Show List View",
         "sort-by-frequency": "Prioritize Frequent Results",

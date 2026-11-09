@@ -44,6 +44,13 @@ void UsageTracker::clear() {
   save();
 }
 
+void UsageTracker::clearRecentlyUsed() {
+  ensureLoaded();
+  m_recentlyUsed.clear();
+  m_recentlyUsedIndex.clear();
+  save();
+}
+
 int UsageTracker::getCount(std::string_view providerId, std::string_view resultId) {
   ensureLoaded();
   const auto provIt = m_counts.find(std::string(providerId));
