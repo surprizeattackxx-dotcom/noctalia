@@ -1643,6 +1643,9 @@ struct BatteryDeviceWarningThreshold {
 struct BatteryConfig {
   // 0 disables the low-battery warning notification and widget warning state by default.
   std::int32_t warningThreshold = 10;
+  /// Warning level for game controllers (UPower "gaming-input" devices) that have no per-device entry. 0 disables.
+  /// Their warning also shows while Do Not Disturb or game mode is on, since that is when a controller is in use.
+  std::int32_t gamingWarningThreshold = 15;
   std::vector<BatteryDeviceWarningThreshold> deviceThresholds;
 
   bool operator==(const BatteryConfig&) const = default;

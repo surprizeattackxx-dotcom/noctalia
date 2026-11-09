@@ -5,11 +5,12 @@ sidebar:
   order: 2
 ---
 
-Battery status uses UPower. The global warning threshold controls the laptop low-battery notifications and the warning color state used by default battery widgets, and it follows the combined charge across all laptop batteries, not any single battery. Peripheral batteries warn only when they have an explicit per-device threshold.
+Battery status uses UPower. The global warning threshold controls the laptop low-battery notifications and the warning color state used by default battery widgets, and it follows the combined charge across all laptop batteries, not any single battery. Game controllers (UPower `gaming-input` devices such as an Xbox controller) warn at `gaming_warning_threshold` (default 15%) without any per-device entry, and that warning still shows while Do Not Disturb or game mode is on (sound muted), because that is when a controller is in use. Other peripheral batteries warn only when they have an explicit per-device threshold, which overrides the controller default too.
 
 ```toml
 [battery]
 warning_threshold = 10 # 0 disables low-battery warnings
+gaming_warning_threshold = 15 # game controllers; 0 disables
 
 # Warning for a second laptop battery, at that battery's own percent
 # See the Multiple laptop batteries section below.

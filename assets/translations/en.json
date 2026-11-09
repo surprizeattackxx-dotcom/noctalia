@@ -3951,6 +3951,10 @@
           "description": "Override the battery warning threshold for this device (0 disables warnings for this device)",
           "label": "{device} Warning Threshold"
         },
+        "battery-gaming-warning-threshold": {
+          "description": "Battery percentage at or below which a game controller sends a low-battery notification, even during Do Not Disturb or game mode (0 disables)",
+          "label": "Controller Warning Threshold"
+        },
         "battery-warning-threshold": {
           "description": "System battery percentage at or below which the shell sends a low-battery notification and battery widgets use their warning color (0 disables)",
           "label": "Battery Warning Threshold"
