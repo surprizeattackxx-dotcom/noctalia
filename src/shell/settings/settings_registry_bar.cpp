@@ -59,6 +59,11 @@ namespace settings::registry {
         };
         entries.push_back(std::move(e));
       }
+      entries.push_back(makeEntry(
+          section, "general", tr("settings.schema.bar.fallback-output.label"),
+          tr("settings.schema.bar.fallback-output.description"), path("fallback_output"),
+          ToggleSetting{bar.fallbackOutput}, "monitor display disconnected unplugged external laptop fallback"
+      ));
       const SettingVisibility autoHideOn = [barName = bar.name](const Config& c) {
         const BarConfig* b = findBar(c, barName);
         return b != nullptr && b->isAutoHideEnabled();

@@ -3120,9 +3120,36 @@ void PanelManager::registerIpc(IpcService& ipc) {
     return error;
   };
 
+  // `output=<connector>` (e.g. DP-1) right after the panel id picks the monitor the panel opens on instead of the
+  // focused one. The token is removed from the context. Returns an error string when the name matches nothing.
+  auto takeOutputArg = [this](std::string& context, wl_output*& output) -> std::optional<std::string> {
+    constexpr std::string_view kPrefix = "output=";
+    if (!context.starts_with(kPrefix)) {
+      return std::nullopt;
+    }
+    const auto end = context.find_first_of(" \t\n\r\f\v");
+    const std::string wanted = context.substr(kPrefix.size(), end == std::string::npos ? end : end - kPrefix.size());
+    context = end == std::string::npos ? std::string{} : std::string(StringUtils::trimLeftView(context.substr(end)));
+    if (m_platform == nullptr) {
+      return std::nullopt;
+    }
+    std::string available;
+    for (const auto& candidate : m_platform->outputs()) {
+      if (candidate.output == nullptr) {
+        continue;
+      }
+      if (StringUtils::toLower(candidate.connectorName) == StringUtils::toLower(wanted)) {
+        output = candidate.output;
+        return std::nullopt;
+      }
+      available += (available.empty() ? "" : ", ") + candidate.connectorName;
+    }
+    return "error: unknown output \"" + wanted + "\" (available: " + available + ")\n";
+  };
+
   ipc.bind(
       noctalia::cli::msg::panelToggle,
-      [this, parseOpenArgs, unknownPanelError](const std::string& args) -> std::string {
+      [this, parseOpenArgs, unknownPanelError, takeOutputArg](const std::string& args) -> std::string {
         std::string panelId;
         std::string context;
         if (auto error = parseOpenArgs(args, "panel-toggle", panelId, context)) {
@@ -3131,18 +3158,23 @@ void PanelManager::registerIpc(IpcService& ipc) {
         if (!m_panels.contains(panelId) && !m_persistentHost.hasPanel(panelId)) {
           return unknownPanelError(panelId);
         }
+        wl_output* output = nullptr;
+        if (auto error = takeOutputArg(context, output)) {
+          return *error;
+        }
         // Output left unset: openPanel resolves it (focus source, else compositor probe).
-        if (context.empty()) {
+        if (context.empty() && output == nullptr) {
           togglePanel(panelId);
         } else {
-          togglePanel(panelId, PanelOpenRequest{.context = context});
+          togglePanel(panelId, PanelOpenRequest{.output = output, .context = context});
         }
         return "ok\n";
       }
   );
 
   ipc.bind(
-      noctalia::cli::msg::panelOpen, [this, parseOpenArgs, unknownPanelError](const std::string& args) -> std::string {
+      noctalia::cli::msg::panelOpen,
+      [this, parseOpenArgs, unknownPanelError, takeOutputArg](const std::string& args) -> std::string {
         std::string panelId;
         std::string context;
         if (auto error = parseOpenArgs(args, "panel-open", panelId, context)) {
@@ -3150,6 +3182,10 @@ void PanelManager::registerIpc(IpcService& ipc) {
         }
         if (!m_panels.contains(panelId) && !m_persistentHost.hasPanel(panelId)) {
           return unknownPanelError(panelId);
+        }
+        wl_output* output = nullptr;
+        if (auto error = takeOutputArg(context, output)) {
+          return *error;
         }
 
         if (isOpen() && !m_closing && m_activePanelId == panelId) {
@@ -3161,7 +3197,7 @@ void PanelManager::registerIpc(IpcService& ipc) {
         }
 
         // Output left unset: openPanel resolves it (focus source, else compositor probe).
-        openPanel(panelId, PanelOpenRequest{.context = context});
+        openPanel(panelId, PanelOpenRequest{.output = output, .context = context});
         return "ok\n";
       }
   );

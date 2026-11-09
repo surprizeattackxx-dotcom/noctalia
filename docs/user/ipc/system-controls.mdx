@@ -114,6 +114,7 @@ Caffeine IPC commands show a short OSD when they change the state.
 | ----------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | List behaviors          | <IpcCommand command="idle-behavior" />               | One line per behavior: name, on/off, timeout and action.                             |
 | Turn one on or off      | <IpcCommand command="idle-behavior lock off" />      | `on`, `off`, `toggle` or `status` for the behavior named `lock` (any behavior name). |
+| Run one now | <IpcCommand command="idle-behavior lock trigger" /> | Runs the behavior's action immediately, even when the behavior is disabled or its timeout has not elapsed (no grace fade). `resume` runs its resume command. Handy for a keybind that starts a screensaver or locks. |
 | Clear runtime overrides | <IpcCommand command="idle-behavior reset" />         | Go back to what the config says.                                                     |
 
 The switch sits on top of the config and lasts until Noctalia restarts or you `reset`; it never writes the config file. Use it for "keep the screen on but still lock" style toggles: `idle-behavior suspend off` stops auto-suspend, `idle-behavior lock off` stops auto-lock.
