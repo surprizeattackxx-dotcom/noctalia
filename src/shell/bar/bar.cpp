@@ -2479,6 +2479,56 @@ void Bar::syncInstances() {
     }
   }
 
+  // fallback_output: a bar that has target monitors, none of them connected, shows on the first connected one.
+  for (std::size_t barIdx = 0; barIdx < bars.size(); ++barIdx) {
+    const BarConfig& bar = bars[barIdx];
+    if (!bar.fallbackOutput) {
+      continue;
+    }
+    const bool wanted = bar.enabled || std::ranges::any_of(bar.monitorOverrides, [](const BarMonitorOverride& ovr) {
+                          return ovr.enabled.value_or(false);
+                        });
+    const WaylandOutput* standIn = nullptr;
+    bool realTarget = false;
+    for (const auto& output : outputs) {
+      if (!output.done || !output.hasUsableGeometry()) {
+        continue;
+      }
+      if (standIn == nullptr) {
+        standIn = &output;
+      }
+      if (ConfigService::resolveForOutput(bar, output).enabled) {
+        realTarget = true;
+      }
+    }
+    const bool needFallback = wanted && !realTarget && standIn != nullptr;
+    std::erase_if(m_instances, [&](const auto& inst) {
+      if (inst->barIndex != barIdx || !inst->isFallback) {
+        return false;
+      }
+      const bool keep = needFallback && inst->outputName == standIn->name;
+      if (!keep) {
+        kLog.info("removing fallback bar instance on output {}", inst->outputName);
+        if (inst->surface != nullptr) {
+          m_surfaceMap.erase(inst->surface->wlSurface());
+        }
+        if (m_hoveredInstance == inst.get()) {
+          m_hoveredInstance = nullptr;
+        }
+      }
+      return !keep;
+    });
+    if (needFallback && !std::ranges::any_of(m_instances, [&](const auto& inst) { return inst->barIndex == barIdx; })) {
+      BarConfig resolved = ConfigService::resolveForOutput(bar, *standIn);
+      resolved.enabled = true;
+      kLog.info("bar \"{}\": no configured monitor connected, showing on {}", bar.name, standIn->connectorName);
+      createInstance(*standIn, barIdx, resolved);
+      if (!m_instances.empty()) {
+        m_instances.back()->isFallback = true;
+      }
+    }
+  }
+
   syncIdleInhibitorAnchors();
   reevaluateSmartAutoHide();
 }

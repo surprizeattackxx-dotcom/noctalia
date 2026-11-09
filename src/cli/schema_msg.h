@@ -184,7 +184,8 @@ namespace noctalia::cli {
   inline constexpr std::array kMsgGameModePositionals{
       Positional{"state", {}, kMsgGameModeChoices, false, false, false},
   };
-  inline constexpr std::array<std::string_view, 5> kMsgIdleBehaviorStates{"on", "off", "toggle", "status", "reset"};
+  inline constexpr std::array<std::string_view, 7> kMsgIdleBehaviorStates{"on",      "off",    "toggle", "status",
+                                                                          "trigger", "resume", "reset"};
   inline constexpr std::array kMsgIdleBehaviorPositionals{
       Positional{"name", {}, {}, false, false, false},
       Positional{"state", {}, kMsgIdleBehaviorStates, false, false, false},
@@ -700,7 +701,8 @@ namespace noctalia::cli {
     };
     inline constexpr Command idleBehavior{
         "idle-behavior",
-        "List idle behaviors, or turn one on/off/toggle by name until restart (e.g. idle-behavior lock off); "
+        "List idle behaviors, turn one on/off/toggle by name until restart (e.g. idle-behavior lock off), "
+        "run its action now ('idle-behavior lock trigger') or its resume command ('... resume'); "
         "'idle-behavior reset' clears the overrides",
         {},
         {},
@@ -720,14 +722,20 @@ namespace noctalia::cli {
         false
     };
     inline constexpr Command panelOpen{
-        "panel-open", "Open a panel by id, optionally with context (e.g. launcher /emo, control-center audio)",
-        {},           {},
-        {},           kMsgPanelOpenPositionals,
-        {},           false
+        "panel-open",
+        "Open a panel by id, optionally on a monitor (output=DP-1) and with context (e.g. launcher /emo, "
+        "control-center audio)",
+        {},
+        {},
+        {},
+        kMsgPanelOpenPositionals,
+        {},
+        false
     };
     inline constexpr Command panelToggle{
         "panel-toggle",
-        "Toggle a panel by id, optionally with context (e.g. launcher /emo, control-center audio)",
+        "Toggle a panel by id, optionally on a monitor (output=DP-1) and with context (e.g. launcher /emo, "
+        "control-center audio)",
         {},
         {},
         {},

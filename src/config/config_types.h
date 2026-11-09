@@ -187,6 +187,9 @@ struct BarConfig {
   bool smartAutoHide = false;        // hide while the active workspace has windows; show when it is empty
   bool autoHideReserveSpace = false; // with auto_hide/smart_auto_hide: reserve layout only while the bar is visible
   bool showOnWorkspaceSwitch = true; // with auto_hide: briefly reveal when the active workspace changes
+  /// When the monitors this bar is enabled for are all disconnected, show it on the first connected monitor instead
+  /// of having no bar at all (laptop unplugged from its external display).
+  bool fallbackOutput = false;
 
   constexpr bool isAutoHideEnabled() const noexcept { return autoHide || smartAutoHide; }
   bool reserveSpace = true;  // reserve compositor exclusive zone; applies with or without auto_hide
@@ -1953,6 +1956,20 @@ struct ControlCenterConfig {
     bool operator==(const MediaTabConfig&) const = default;
   };
 
+  /// Cards and lines of the Home tab. Everything defaults to shown, as before.
+  struct HomeTabConfig {
+    bool showUserCard = true;
+    bool showMediaCard = true;
+    bool showDateTimeCard = true;
+    bool showWeather = true;        // the weather line inside the date/time card
+    bool hideMediaWhenIdle = false; // hide the media card while no player is active
+    bool showUserHost = true;
+    bool showUptime = true;
+    bool showVersion = true;
+    bool showCompositor = true;
+    bool operator==(const HomeTabConfig&) const = default;
+  };
+
   std::vector<ShortcutConfig> shortcuts;
   std::vector<std::string> hiddenTabs; // tab keys (see kTabs) the user has hidden; empty = all available shown
   ControlCenterSidebarMode sidebarMode = ControlCenterSidebarMode::Compact;
@@ -1963,6 +1980,7 @@ struct ControlCenterConfig {
   bool showAvatarBorder = true;
   CalendarTabConfig calendarTab;
   MediaTabConfig mediaTab;
+  HomeTabConfig homeTab;
   bool operator==(const ControlCenterConfig&) const = default;
 };
 
