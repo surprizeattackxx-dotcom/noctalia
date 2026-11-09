@@ -180,6 +180,10 @@ namespace noctalia::cli {
   inline constexpr std::array kMsgPanelClosePositionals{
       Positional{"id", {}, {}, false, false, false},
   };
+  inline constexpr std::array<std::string_view, 5> kMsgGameModeChoices{"on", "off", "auto", "toggle", "status"};
+  inline constexpr std::array kMsgGameModePositionals{
+      Positional{"state", {}, kMsgGameModeChoices, false, false, false},
+  };
   inline constexpr std::array kMsgPanelIsOpenPositionals{
       Positional{"id", {}, {}, false, false, false},
   };
@@ -676,6 +680,12 @@ namespace noctalia::cli {
         {},
         false
     };
+    inline constexpr Command gameMode{
+        "game-mode", "Show or set game mode: on, off, auto (follow the focused game), toggle or status",
+        {},          {},
+        {},          kMsgGameModePositionals,
+        {},          false
+    };
     inline constexpr Command panelIsOpen{
         "panel-is-open",
         "Print true or false: whether the named panel (or any panel, when no id is given) is open",
@@ -1016,6 +1026,7 @@ namespace noctalia::cli {
       msg::osdEnable,
       msg::osdShow,
       msg::osdToggle,
+      msg::gameMode,
       msg::panelClose,
       msg::panelIsOpen,
       msg::panelOpen,

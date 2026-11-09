@@ -40,6 +40,17 @@ namespace noctalia::config::schema {
     return s;
   }
 
+  const Schema<GameModeConfig>& gameModeSchema() {
+    static const Schema<GameModeConfig> s = {
+        field(&GameModeConfig::autoDetect, "auto_detect"),
+        field(&GameModeConfig::apps, "apps"),
+        field(&GameModeConfig::dnd, "dnd"),
+        field(&GameModeConfig::inhibitIdle, "inhibit_idle"),
+        field(&GameModeConfig::powerProfile, "power_profile"),
+    };
+    return s;
+  }
+
   const Schema<WeatherConfig>& weatherSchema() {
     static const Schema<WeatherConfig> s = {
         field(&WeatherConfig::enabled, "enabled"),
@@ -159,6 +170,7 @@ namespace noctalia::config::schema {
       static const Schema<SystemConfig::MonitorConfig> s = {
           field(&SystemConfig::MonitorConfig::enabled, "enabled"),
           field(&SystemConfig::MonitorConfig::cpuTempSensorPath, "cpu_temp_sensor_path"),
+          field(&SystemConfig::MonitorConfig::temperatureUnit, "temperature_unit"),
           field(&SystemConfig::MonitorConfig::cpuPollSeconds, "cpu_poll_seconds"),
           field(&SystemConfig::MonitorConfig::gpuPollSeconds, "gpu_poll_seconds"),
           field(&SystemConfig::MonitorConfig::memoryPollSeconds, "memory_poll_seconds"),

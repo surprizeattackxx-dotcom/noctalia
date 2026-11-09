@@ -784,7 +784,7 @@ std::string DesktopSysmonWidget::formatValueFor(DesktopSysmonStat stat) const {
 
   case DesktopSysmonStat::CpuTemp:
     if (stats.cpuTempC.has_value()) {
-      return std::format("{:.0F}°C", *stats.cpuTempC);
+      return FormatUnits::formatTemperatureFromCelsius(*stats.cpuTempC);
     }
     return "--";
 
@@ -796,7 +796,7 @@ std::string DesktopSysmonWidget::formatValueFor(DesktopSysmonStat stat) const {
 
   case DesktopSysmonStat::GpuTemp:
     if (stats.gpuTempC.has_value()) {
-      return std::format("{:.0F}°C", *stats.gpuTempC);
+      return FormatUnits::formatTemperatureFromCelsius(*stats.gpuTempC);
     }
     return "--";
 

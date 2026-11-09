@@ -1,0 +1,21 @@
+---
+title: Game mode
+description: Quiet the shell while a game is focused.
+sidebar:
+  order: 12
+---
+
+Game mode keeps the shell out of the way while you play. While it is on, Noctalia can turn on do-not-disturb, hold off idle lock, screen off and suspend, switch the power profile, and run hooks. Leaving game mode restores exactly what was there before: do-not-disturb returns to its previous state, caffeine is released only if game mode set it, and the previous power profile comes back.
+
+```toml
+[game_mode]
+auto_detect   = true                          # follow the focused window
+apps          = ["steam_app_*", "gamescope"]  # app id globs, case-insensitive, * is a wildcard
+dnd           = true                          # do not disturb while active
+inhibit_idle  = true                          # hold off idle actions while active
+power_profile = ""                            # e.g. "performance"; empty leaves it alone
+```
+
+Detection checks the focused window's app id every two seconds. `steam_app_*` matches every Proton game started from Steam. For anything else, find the app id with the taskbar or `noctalia msg` tooling and add it to `apps`.
+
+Force it from a keybind or script with `noctalia msg game-mode on|off|auto|toggle|status`. A forced `on` or `off` wins over detection until you send `auto`. The `game_mode_started` and `game_mode_ended` [hooks](/noctalia/automation/hooks/) run on every change. Controller input already counts as idle activity (see [Idle](/noctalia/services/idle/)).

@@ -587,6 +587,8 @@ show_visualizer = true              # PipeWire audio visualizer beside the playb
 # battery_state_changed   = "notify-send 'Power' \"Battery: $NOCTALIA_BATTERY_STATE\""
 # battery_under_threshold = "notify-send 'Power' \"Battery at ${NOCTALIA_BATTERY_PERCENT}%\""
 # power_profile_changed   = "notify-send 'Power' \"Profile: $NOCTALIA_POWER_PROFILE\""
+# game_mode_started      = []
+# game_mode_ended        = []
 # system_suspending       = []
 # system_resumed          = []
 # [widget.launcher]

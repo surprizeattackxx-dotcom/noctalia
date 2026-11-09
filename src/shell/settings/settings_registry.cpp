@@ -3390,6 +3390,23 @@ namespace settings {
         "session panel power menu logout reboot shutdown lock command actions order"
     ));
 
+    // Game mode
+    entries.push_back(makeEntry(
+        SettingsSection::Power, "idle", tr("settings.schema.game-mode.auto-detect.label"),
+        tr("settings.schema.game-mode.auto-detect.description"), {"game_mode", "auto_detect"},
+        ToggleSetting{.checked = cfg.gameMode.autoDetect}, "game mode gaming steam fullscreen"
+    ));
+    entries.push_back(makeEntry(
+        SettingsSection::Power, "idle", tr("settings.schema.game-mode.dnd.label"),
+        tr("settings.schema.game-mode.dnd.description"), {"game_mode", "dnd"},
+        ToggleSetting{.checked = cfg.gameMode.dnd}, "game mode do not disturb notifications"
+    ));
+    entries.push_back(makeEntry(
+        SettingsSection::Power, "idle", tr("settings.schema.game-mode.inhibit-idle.label"),
+        tr("settings.schema.game-mode.inhibit-idle.description"), {"game_mode", "inhibit_idle"},
+        ToggleSetting{.checked = cfg.gameMode.inhibitIdle}, "game mode idle lock screen off suspend"
+    ));
+
     // Idle
     entries.push_back(makeEntry(
         SettingsSection::Power, "idle", tr("settings.schema.idle.gamepad-activity.label"),
@@ -3441,6 +3458,8 @@ namespace settings {
       case HookKind::PowerProfileChanged:
       case HookKind::SystemSuspending:
       case HookKind::SystemResumed:
+      case HookKind::GameModeStarted:
+      case HookKind::GameModeEnded:
         return "power";
       case HookKind::Count:
         break;
@@ -3455,6 +3474,9 @@ namespace settings {
           || kind == HookKind::BatteryPlugged
           || kind == HookKind::BatteryPercentageChanged) {
         tags += " battery power";
+      }
+      if (kind == HookKind::GameModeStarted || kind == HookKind::GameModeEnded) {
+        tags += " game gaming steam";
       }
       if (kind == HookKind::SystemSuspending || kind == HookKind::SystemResumed) {
         tags += " suspend resume sleep wake wakeup hibernate";

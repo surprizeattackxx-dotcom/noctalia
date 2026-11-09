@@ -72,6 +72,7 @@
 #include "system/battery_warning_monitor.h"
 #include "system/dependency_service.h"
 #include "system/desktop_entry_poll_source.h"
+#include "system/game_mode.h"
 #include "system/gamma_service.h"
 #include "system/icon_theme_poll_source.h"
 #include "system/location_poll_source.h"
@@ -245,6 +246,7 @@ private:
   void onUpowerStateChangedForHooks();
   void onNetworkStateChangedForEvents(const NetworkState& state, NetworkChangeOrigin origin);
   void onBluetoothStateChangedForEvents(const BluetoothState& state, BluetoothStateChangeOrigin origin);
+  void applyGameMode(bool active);
   void onPowerProfileChangedForEvents(const PowerProfilesState& state, PowerProfilesChangeOrigin origin);
   [[nodiscard]] std::vector<PollSource*> currentPollSources();
   [[nodiscard]] std::vector<PollSource*> buildPollSources();
@@ -295,6 +297,11 @@ private:
   IdleInhibitor m_idleInhibitor;
   IdleManager m_idleManager;
   GamepadActivityMonitor m_gamepadMonitor;
+  GameMode m_gameMode;
+  // State saved on entering game mode so leaving restores exactly what was there.
+  bool m_gameModePrevDnd = false;
+  bool m_gameModeSetCaffeine = false;
+  std::string m_gameModePrevProfile;
   PluginIdleWatches m_pluginIdleWatches;
   IdleGraceOverlay m_idleGraceOverlay;
   std::uint64_t m_idleGraceOverlayGeneration = 0;

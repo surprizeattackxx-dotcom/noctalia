@@ -46,6 +46,7 @@
 #include "shell/wallpaper/wallpaper_paths.h"
 #include "system/brightness_service.h"
 #include "system/easyeffects_service.h"
+#include "system/format_units.h"
 #include "ui/app_icon_colorization.h"
 #include "ui/controls/context_menu_popup.h"
 #include "ui/dialogs/color_picker_dialog.h"
@@ -797,6 +798,20 @@ void Application::initNotificationAndOsd() {
   );
   m_idleGraceOverlay.initialize(m_wayland, &m_renderContext);
   m_pluginIdleWatches.initialize(m_wayland);
+  m_gameMode.setActiveAppProvider([this] {
+    const auto active = m_compositorPlatform.activeToplevel();
+    return active.has_value() ? active->appId : std::string{};
+  });
+  m_gameMode.setChangeCallback([this](bool active) { applyGameMode(active); });
+  m_gameMode.configure(m_configService.config().gameMode);
+  FormatUnits::setTemperatureFahrenheit(m_configService.config().system.monitor.temperatureUnit == "fahrenheit");
+  m_configService.addReloadCallback(
+      [this] {
+        m_gameMode.configure(m_configService.config().gameMode);
+        FormatUnits::setTemperatureFahrenheit(m_configService.config().system.monitor.temperatureUnit == "fahrenheit");
+      },
+      "game_mode"
+  );
   m_gamepadMonitor.setActivityCallback([this] { m_idleManager.noteExternalActivity(); });
   m_gamepadMonitor.setEnabled(m_configService.config().idle.gamepadActivity);
   m_wayland.setIdleCapabilitiesReadyCallback([this] {
@@ -1219,4 +1234,44 @@ TimeService::Precision Application::timePrecisionNeeded() const {
   // Minute is the idle floor: it settles minute-aligned clocks. Wallpaper
   // automation wakes through its own deadline instead.
   return TimeService::Precision::Minute;
+}
+
+void Application::applyGameMode(bool active) {
+  const GameModeConfig& cfg = m_configService.config().gameMode;
+  if (active) {
+    if (cfg.dnd) {
+      m_gameModePrevDnd = m_notificationManager.doNotDisturb();
+      m_notificationManager.setDoNotDisturb(true);
+    }
+    if (cfg.inhibitIdle && !m_idleInhibitor.enabled() && m_idleInhibitor.available()) {
+      m_idleInhibitor.setEnabled(true);
+      m_gameModeSetCaffeine = true;
+    }
+    if (!cfg.powerProfile.empty() && m_powerProfilesService != nullptr) {
+      m_gameModePrevProfile = m_powerProfilesService->activeProfile();
+      if (m_gameModePrevProfile != cfg.powerProfile) {
+        (void)m_powerProfilesService->setActiveProfile(cfg.powerProfile);
+      } else {
+        m_gameModePrevProfile.clear();
+      }
+    }
+    m_hookManager.fire(HookKind::GameModeStarted, {{"NOCTALIA_GAME_APP", m_gameMode.detectedApp()}});
+  } else {
+    if (cfg.dnd) {
+      m_notificationManager.setDoNotDisturb(m_gameModePrevDnd);
+    }
+    if (m_gameModeSetCaffeine) {
+      m_idleInhibitor.setEnabled(false);
+      m_gameModeSetCaffeine = false;
+    }
+    if (!m_gameModePrevProfile.empty() && m_powerProfilesService != nullptr) {
+      (void)m_powerProfilesService->setActiveProfile(m_gameModePrevProfile);
+      m_gameModePrevProfile.clear();
+    }
+    m_hookManager.fire(HookKind::GameModeEnded);
+  }
+  m_bar.refresh();
+  if (m_panelManager.isOpenPanel("control-center")) {
+    m_panelManager.refresh();
+  }
 }

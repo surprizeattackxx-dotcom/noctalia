@@ -1133,7 +1133,7 @@ std::optional<std::string> SysmonWidget::formatValueFor(SysmonStat stat, const S
 
   case SysmonStat::CpuTemp:
     if (stats.cpuTempAvailable && stats.cpuTempC.has_value()) {
-      return std::format("{:.0F}°C", *stats.cpuTempC);
+      return FormatUnits::formatTemperatureFromCelsius(*stats.cpuTempC);
     }
     return std::nullopt;
   case SysmonStat::CpuFreq:
@@ -1143,7 +1143,7 @@ std::optional<std::string> SysmonWidget::formatValueFor(SysmonStat stat, const S
     return std::nullopt;
   case SysmonStat::GpuTemp:
     if (stats.gpuTempC.has_value()) {
-      return std::format("{:.0F}°C", *stats.gpuTempC);
+      return FormatUnits::formatTemperatureFromCelsius(*stats.gpuTempC);
     }
     return std::nullopt;
 

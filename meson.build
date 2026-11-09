@@ -546,6 +546,7 @@ _noctalia_sources = files(
   'src/hooks/hook_manager.cpp',
   'src/idle/idle_inhibitor.cpp',
   'src/idle/gamepad_activity.cpp',
+  'src/system/game_mode.cpp',
   'src/idle/idle_grace_overlay.cpp',
   'src/idle/idle_manager.cpp',
   'src/idle/plugin_idle_watches.cpp',

@@ -1427,6 +1427,19 @@ struct WeatherConfig {
   bool operator==(const WeatherConfig&) const = default;
 };
 
+struct GameModeConfig {
+  /// Turn game mode on by itself while a window matching `apps` is focused.
+  bool autoDetect = true;
+  /// Focused-window app id globs (case-insensitive, `*` wildcard). `steam_app_*` matches every Proton game.
+  std::vector<std::string> apps = {"steam_app_*", "gamescope"};
+  bool dnd = true;         // do-not-disturb while active
+  bool inhibitIdle = true; // hold off idle lock / screen off / suspend while active
+  /// power-profiles-daemon profile to switch to while active (e.g. "performance"); empty leaves it alone.
+  std::string powerProfile;
+
+  bool operator==(const GameModeConfig&) const = default;
+};
+
 struct StorageConfig {
   StorageKeySource keySource = StorageKeySource::SecretService;
   std::string keyFile;
@@ -1496,6 +1509,8 @@ struct SystemConfig {
 
     bool enabled = true;
     std::string cpuTempSensorPath;
+    /// "celsius" (default) or "fahrenheit": unit for the CPU/GPU temperature readouts.
+    std::string temperatureUnit = "celsius";
     float cpuPollSeconds = 2.0F;
     // GPU probes only run while something displays a GPU stat (SystemMonitorService retain counts),
     // so an idle machine never wakes a discrete GPU. Set to 0 to stop probing it entirely.
@@ -1705,6 +1720,8 @@ enum class HookKind : std::uint8_t {
   PowerProfileChanged,
   SystemSuspending,
   SystemResumed,
+  GameModeStarted,
+  GameModeEnded,
   Count
 };
 
@@ -1729,6 +1746,8 @@ constexpr EnumOption<HookKind> kHookKinds[] = {
     {HookKind::PowerProfileChanged, "power_profile_changed", ""},
     {HookKind::SystemSuspending, "system_suspending", ""},
     {HookKind::SystemResumed, "system_resumed", ""},
+    {HookKind::GameModeStarted, "game_mode_started", ""},
+    {HookKind::GameModeEnded, "game_mode_ended", ""},
 };
 
 static_assert(sizeof(kHookKinds) / sizeof(kHookKinds[0]) == static_cast<std::size_t>(HookKind::Count));
@@ -2027,6 +2046,7 @@ struct Config {
   OsdConfig osd;
   NotificationConfig notification;
   WeatherConfig weather;
+  GameModeConfig gameMode;
   CalendarConfig calendar;
   SystemConfig system;
   AudioConfig audio;

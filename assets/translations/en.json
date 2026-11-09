@@ -2489,6 +2489,14 @@
             "description": "Command to run when the active color palette changes",
             "label": "On Colors Changed"
           },
+          "game-mode-ended": {
+            "description": "Command to run when game mode turns off",
+            "label": "On Game Mode Ended"
+          },
+          "game-mode-started": {
+            "description": "Command to run when game mode turns on (NOCTALIA_GAME_APP names the detected app)",
+            "label": "On Game Mode Started"
+          },
           "logging-out": {
             "description": "Command to run before logging out",
             "label": "On Logout"
@@ -3927,6 +3935,20 @@
         "transitions": {
           "description": "Effects available when changing wallpaper (one is picked at random per change)",
           "label": "Transition Effects"
+        }
+      },
+      "game-mode": {
+        "auto-detect": {
+          "label": "Game mode: detect games",
+          "description": "Turn game mode on while a Steam game (or another app listed in game_mode.apps) is focused"
+        },
+        "dnd": {
+          "label": "Game mode: do not disturb",
+          "description": "Silence notifications while game mode is on"
+        },
+        "inhibit-idle": {
+          "label": "Game mode: block idle",
+          "description": "Hold off idle lock, screen off and suspend while game mode is on"
         }
       }
     },

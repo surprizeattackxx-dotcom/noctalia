@@ -9,6 +9,7 @@ sidebar:
 [system.monitor]
 enabled = true                      # sample CPU, memory, network, load, temperature, GPU VRAM, and disk statistics
 cpu_temp_sensor_path = ""           # exact temp*_input path for CPU temperature override; empty = auto
+temperature_unit = "celsius"        # celsius | fahrenheit: unit for CPU and GPU temperature readouts
 cpu_poll_seconds = 2.0              # CPU usage, frequency, temperature, and load average
 gpu_poll_seconds = 5.0              # GPU temperature, usage, and VRAM; probes run only while displayed
 memory_poll_seconds = 2.0           # RAM usage
