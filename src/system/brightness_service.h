@@ -9,6 +9,7 @@
 #include <vector>
 
 class IpcService;
+class SessionBus;
 class SystemBus;
 class CompositorPlatform;
 struct BrightnessConfig;
@@ -55,9 +56,11 @@ public:
     End,
   };
 
+  // sessionBus is only used on KDE, where Plasma's powerdevil (org.kde.ScreenBrightness) owns every monitor.
   BrightnessService(
       SystemBus* bus, CompositorPlatform& platform, const BrightnessConfig& config, const LocationConfig& location,
-      BrightnessDdcRetryDelays retryDelays = {}, BrightnessScheduleTiming timing = {}, BrightnessClockFn clockFn = {}
+      BrightnessDdcRetryDelays retryDelays = {}, BrightnessScheduleTiming timing = {}, BrightnessClockFn clockFn = {},
+      SessionBus* sessionBus = nullptr
   );
   ~BrightnessService();
 

@@ -342,11 +342,14 @@ namespace compositors::kde {
 
   std::optional<ActiveToplevel> KwinActiveWindow::current() const { return m_current; }
 
-  std::vector<std::string> KwinActiveWindow::runningAppIds() const {
+  std::vector<std::string> KwinActiveWindow::runningAppIds(std::string_view outputName) const {
     std::vector<std::string> ids;
     std::unordered_set<std::string> seen;
     ids.reserve(m_trackedWindows.size());
     for (const auto& window : m_trackedWindows) {
+      if (!outputName.empty() && !window.outputName.empty() && window.outputName != outputName) {
+        continue;
+      }
       if (window.appId.empty()
           || isNoctaliaShellSurface(window.appId, window.title)
           || !seen.insert(window.appId).second) {
@@ -357,12 +360,16 @@ namespace compositors::kde {
     return ids;
   }
 
-  std::vector<ToplevelInfo>
-  KwinActiveWindow::windowsForApp(const std::string& idLower, const std::string& wmClassLower) const {
+  std::vector<ToplevelInfo> KwinActiveWindow::windowsForApp(
+      const std::string& idLower, const std::string& wmClassLower, std::string_view outputName
+  ) const {
     std::vector<ToplevelInfo> matched;
     matched.reserve(m_trackedWindows.size());
     std::uint64_t order = 0;
     for (const auto& window : m_trackedWindows) {
+      if (!outputName.empty() && !window.outputName.empty() && window.outputName != outputName) {
+        continue;
+      }
       if (window.appId.empty() || isNoctaliaShellSurface(window.appId, window.title)) {
         continue;
       }
@@ -553,6 +560,62 @@ for (const window of workspace.windowList()) {{
     const std::string label = std::format("noctalia-close-{}", ++m_transientScriptSerial);
     if (!runTransientScript(script, label)) {
       kLog.warn(R"(failed to close kde window class="{}" title="{}")", appId, title);
+    }
+  }
+
+  void KwinActiveWindow::moveWindowToDesktop(const std::string& uuid, int desktopIndex) {
+    if (!m_scriptInstalled || uuid.empty() || desktopIndex < 1) {
+      return;
+    }
+    const std::string script = std::format(
+        R"js(
+const targetUuid = {};
+const desktopIndex = {};
+const desktop = workspace.desktops[desktopIndex - 1];
+if (desktop) {{
+  for (const window of workspace.windowList()) {{
+    if (window && window.normalWindow && String(window.internalId) === targetUuid) {{
+      window.desktops = [desktop];
+      break;
+    }}
+  }}
+}}
+)js",
+        jsStringLiteral(uuid), desktopIndex
+    );
+    if (!runTransientScript(script, std::format("noctalia-move-desktop-{}", ++m_transientScriptSerial))) {
+      kLog.warn("failed to move kde window to desktop {}", desktopIndex);
+    }
+  }
+
+  void KwinActiveWindow::moveWindowToOutput(const std::string& uuid, const std::string& outputName) {
+    if (!m_scriptInstalled || uuid.empty() || outputName.empty()) {
+      return;
+    }
+    const std::string script = std::format(
+        R"js(
+const targetUuid = {};
+const targetOutput = {};
+let output = null;
+for (const candidate of workspace.screens) {{
+  if (candidate.name === targetOutput) {{
+    output = candidate;
+    break;
+  }}
+}}
+if (output) {{
+  for (const window of workspace.windowList()) {{
+    if (window && window.normalWindow && String(window.internalId) === targetUuid) {{
+      workspace.sendClientToScreen(window, output);
+      break;
+    }}
+  }}
+}}
+)js",
+        jsStringLiteral(uuid), jsStringLiteral(outputName)
+    );
+    if (!runTransientScript(script, std::format("noctalia-move-output-{}", ++m_transientScriptSerial))) {
+      kLog.warn("failed to move kde window to output {}", outputName);
     }
   }
 

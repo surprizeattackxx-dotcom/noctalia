@@ -29,6 +29,7 @@ enum class WindowSwitcherScope : std::uint8_t {
   Output,
   Workspace,
   Current,
+  App, // every output and workspace, but only windows of the focused window's application
 };
 
 // Fullscreen keyboard-driven switcher with selectable preview presentations.
@@ -114,6 +115,7 @@ private:
   WindowSwitcherShortcutState m_shortcutState;
   std::uint64_t m_shortcutSessionGeneration = 0;
   WindowSwitcherScope m_scopeOverride = WindowSwitcherScope::None;
+  std::string m_appScopeAppId;
   bool m_active = false;
   bool m_shortcutSession = false;
 };

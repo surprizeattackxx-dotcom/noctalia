@@ -290,6 +290,10 @@ const noctalia::bar::WidgetDefinition<TaskbarWidgetOptions>& taskbarWidgetDefini
                               ),
                           }
                       ),
+                      field<&Options::followFocusedOutput>({
+                          .key = "follow_focused_output",
+                          .presentation = presentation("taskbar.windows"),
+                      }),
                       field<&Options::focusedOutputOnly>({
                           .key = "focused_output_only",
                           .presentation = presentation(

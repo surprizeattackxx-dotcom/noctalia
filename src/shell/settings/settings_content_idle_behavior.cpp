@@ -7,6 +7,7 @@
 #include "ui/controls/flex.h"
 #include "ui/controls/input.h"
 #include "ui/controls/select.h"
+#include "ui/controls/toggle.h"
 #include "ui/palette.h"
 #include "ui/style.h"
 #include "util/string_utils.h"
@@ -245,6 +246,23 @@ namespace settings {
       lockedTimeoutBlock->addChild(std::move(lockedTimeoutIn));
       body->addChild(std::move(lockedTimeoutBlock));
     }
+
+    auto ignoreInhibitorsRow = ui::row(
+        {.align = FlexAlign::Center, .gap = Style::spaceSm * scale},
+        makeLabel(
+            i18n::tr("settings.idle.behavior.ignore-inhibitors-label"), Style::fontSizeBody * scale,
+            colorSpecFromRole(ColorRole::OnSurface), FontWeight::Normal
+        ),
+        ui::toggle({
+            .checked = row.ignoreInhibitors,
+            .scale = scale,
+            .onChange = [&row, persist](bool checked) {
+              row.ignoreInhibitors = checked;
+              persist();
+            },
+        })
+    );
+    body->addChild(std::move(ignoreInhibitorsRow));
 
     body->addChild(std::move(customCommandsGrp));
     body->addChild(std::move(resumeCommandGrp));

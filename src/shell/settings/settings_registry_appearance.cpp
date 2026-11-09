@@ -167,6 +167,11 @@ namespace settings::registry {
         tr("settings.schema.appearance.sync-color-scheme.description"), {"theme", "sync_color_scheme"},
         ToggleSetting{cfg.theme.syncColorScheme}, "gnome gtk portal dark light prefer color scheme apps"
     ));
+    entries.push_back(makeEntry(
+        SettingsSection::Appearance, "theme", tr("settings.schema.appearance.cycle-includes-auto.label"),
+        tr("settings.schema.appearance.cycle-includes-auto.description"), {"theme", "cycle_includes_auto"},
+        ToggleSetting{cfg.theme.cycleIncludesAuto}, "dark mode shortcut cycle auto light"
+    ));
     {
       SettingControl fontFamilyControl =
           TextSetting{.value = cfg.shell.fontFamily, .placeholder = "sans-serif", .browseFileExtensions = {}};

@@ -126,6 +126,97 @@ namespace settings::registry {
     }
     {
       auto e = makeEntry(
+          SettingsSection::Location, "weather", tr("settings.schema.services.weather-temperature-unit.label"),
+          tr("settings.schema.services.weather-temperature-unit.description"), {"weather", "temperature_unit"},
+          plainSelect(
+              {{"", "settings.options.weather.temperature."},
+               {"c", "settings.options.weather.temperature.c"},
+               {"f", "settings.options.weather.temperature.f"}},
+              cfg.weather.temperatureUnit
+          ),
+          "temperature celsius fahrenheit units"
+      );
+      e.visibleWhen = weatherOn;
+      entries.push_back(std::move(e));
+    }
+    {
+      auto e = makeEntry(
+          SettingsSection::Location, "weather", tr("settings.schema.services.weather-wind-unit.label"),
+          tr("settings.schema.services.weather-wind-unit.description"), {"weather", "wind_unit"},
+          plainSelect(
+              {{"", "settings.options.weather.wind."},
+               {"kmh", "settings.options.weather.wind.kmh"},
+               {"mph", "settings.options.weather.wind.mph"},
+               {"ms", "settings.options.weather.wind.ms"},
+               {"kn", "settings.options.weather.wind.kn"}},
+              cfg.weather.windUnit
+          ),
+          "wind speed units mph kmh knots"
+      );
+      e.visibleWhen = weatherOn;
+      entries.push_back(std::move(e));
+    }
+    {
+      auto e = makeEntry(
+          SettingsSection::Location, "weather", tr("settings.schema.services.weather-pressure-unit.label"),
+          tr("settings.schema.services.weather-pressure-unit.description"), {"weather", "pressure_unit"},
+          plainSelect(
+              {{"", "settings.options.weather.pressure."},
+               {"hpa", "settings.options.weather.pressure.hpa"},
+               {"inhg", "settings.options.weather.pressure.inhg"},
+               {"mmhg", "settings.options.weather.pressure.mmhg"},
+               {"kpa", "settings.options.weather.pressure.kpa"}},
+              cfg.weather.pressureUnit
+          ),
+          "pressure barometer units hpa inhg"
+      );
+      e.visibleWhen = weatherOn;
+      entries.push_back(std::move(e));
+    }
+    {
+      auto e = makeEntry(
+          SettingsSection::Location, "weather", tr("settings.schema.services.weather-air-quality.label"),
+          tr("settings.schema.services.weather-air-quality.description"), {"weather", "air_quality"},
+          ToggleSetting{cfg.weather.airQuality}, "air quality aqi pollution"
+      );
+      e.visibleWhen = weatherOn;
+      entries.push_back(std::move(e));
+    }
+    {
+      auto e = makeEntry(
+          SettingsSection::Location, "weather", tr("settings.schema.services.weather-rain-alert.label"),
+          tr("settings.schema.services.weather-rain-alert.description"), {"weather", "rain_alert"},
+          ToggleSetting{cfg.weather.rainAlert}, "rain snow precipitation notification alert umbrella"
+      );
+      e.visibleWhen = weatherOn;
+      entries.push_back(std::move(e));
+    }
+    {
+      auto e = makeEntry(
+          SettingsSection::Location, "weather", tr("settings.schema.services.weather-rain-alert-percent.label"),
+          tr("settings.schema.services.weather-rain-alert-percent.description"), {"weather", "rain_alert_percent"},
+          StepperSetting{
+              .value = cfg.weather.rainAlertPercent, .minValue = 10, .maxValue = 100, .step = 5, .valueSuffix = "%"
+          },
+          "rain alert chance percent"
+      );
+      e.visibleWhen = [](const Config& c) { return c.weather.enabled && c.weather.rainAlert; };
+      entries.push_back(std::move(e));
+    }
+    {
+      auto e = makeEntry(
+          SettingsSection::Location, "weather", tr("settings.schema.services.weather-rain-alert-hours.label"),
+          tr("settings.schema.services.weather-rain-alert-hours.description"), {"weather", "rain_alert_hours"},
+          StepperSetting{
+              .value = cfg.weather.rainAlertHours, .minValue = 1, .maxValue = 12, .step = 1, .valueSuffix = "h"
+          },
+          "rain alert hours window"
+      );
+      e.visibleWhen = [](const Config& c) { return c.weather.enabled && c.weather.rainAlert; };
+      entries.push_back(std::move(e));
+    }
+    {
+      auto e = makeEntry(
           SettingsSection::Location, "weather", tr("settings.schema.services.weather-effects.label"),
           tr("settings.schema.services.weather-effects.description"), {"weather", "effects"},
           ToggleSetting{cfg.weather.effects}, "forecast visuals"

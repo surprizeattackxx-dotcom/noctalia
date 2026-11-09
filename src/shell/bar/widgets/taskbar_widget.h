@@ -59,6 +59,8 @@ struct TaskbarWidgetOptions {
   std::vector<std::string> hiddenWorkspaces;
   bool workspaceGroupCapsule = true;
   bool focusedOutputOnly = false;
+  // Show the windows and workspaces of whichever monitor has focus instead of the bar's own monitor.
+  bool followFocusedOutput = false;
   bool minimal = false;
   bool groupSingleIconPerApp = false;
   bool showActiveIndicator = true;
@@ -205,6 +207,8 @@ private:
   static std::string toLower(const std::string& value);
   static const std::string& displayTitle(const TaskModel& task) noexcept;
   static std::string workspaceLabel(const Workspace& workspace, std::size_t index);
+  // The monitor whose windows and workspaces this widget shows: its own, or the focused one.
+  [[nodiscard]] wl_output* effectiveOutput() const noexcept;
   static std::string workspaceGroupLabel(
       const Workspace& workspace, std::size_t index, std::string_view displayKey, TaskbarLabelSource source
   );

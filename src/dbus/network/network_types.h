@@ -28,6 +28,13 @@ struct AccessPointInfo {
   bool operator==(const AccessPointInfo&) const = default;
 };
 
+// Security of a hidden (non-broadcast) network, chosen by the user because it cannot be read from a scan.
+enum class HiddenNetworkSecurity : std::uint8_t {
+  Open,
+  Wpa2Personal,
+  Wpa3Personal,
+};
+
 struct VpnConnectionInfo {
   std::string path; // Backend settings connection object path.
   std::string name;
