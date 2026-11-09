@@ -3,7 +3,7 @@ name: rebase-upstream
 # Clean replay -> pushes branch kde-rebase-<short sha> (the build-kde workflow then checks it compiles).
 # Conflict -> opens an issue so a human ports the patch.
 on:
-  schedule: [{cron: '0 7 * * 1'}]
+  schedule: [{cron: '0 7 * * *'}]
   workflow_dispatch:
 permissions:
   contents: write
