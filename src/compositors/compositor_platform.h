@@ -69,6 +69,7 @@ public:
 
   void initialize();
   void startKdeActiveWindow(SessionBus& bus);
+  SessionBus* kdeSessionBus() const noexcept;
   void cleanup();
 
   WaylandConnection& wayland() noexcept { return m_wayland; }
