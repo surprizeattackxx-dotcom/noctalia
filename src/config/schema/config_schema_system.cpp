@@ -39,6 +39,22 @@ namespace noctalia::config::schema {
         field(&WeatherConfig::effects, "effects"),
         field(&WeatherConfig::refreshMinutes, "refresh_minutes", kRefreshMinutesRange),
         field(&WeatherConfig::unit, "unit"),
+        field(&WeatherConfig::temperatureUnit, "temperature_unit"),
+        field(&WeatherConfig::windUnit, "wind_unit"),
+        field(&WeatherConfig::pressureUnit, "pressure_unit"),
+        field(&WeatherConfig::airQuality, "air_quality"),
+        field(&WeatherConfig::rainAlert, "rain_alert"),
+        field(&WeatherConfig::rainAlertPercent, "rain_alert_percent", Range<std::int64_t>{10, 100, 5}),
+        field(&WeatherConfig::rainAlertHours, "rain_alert_hours", Range<std::int64_t>{1, 12, 1}),
+    };
+    return s;
+  }
+
+  const Schema<GameModeConfig>& gameModeSchema() {
+    static const Schema<GameModeConfig> s = {
+        field(&GameModeConfig::autoDetect, "auto_detect"),     field(&GameModeConfig::apps, "apps"),
+        field(&GameModeConfig::requireFocus, "require_focus"), field(&GameModeConfig::dnd, "dnd"),
+        field(&GameModeConfig::inhibitIdle, "inhibit_idle"),   field(&GameModeConfig::powerProfile, "power_profile"),
     };
     return s;
   }
@@ -50,6 +66,7 @@ namespace noctalia::config::schema {
       static const Schema<SystemConfig::MonitorConfig> s = {
           field(&SystemConfig::MonitorConfig::enabled, "enabled"),
           field(&SystemConfig::MonitorConfig::cpuTempSensorPath, "cpu_temp_sensor_path"),
+          field(&SystemConfig::MonitorConfig::temperatureUnit, "temperature_unit"),
           field(&SystemConfig::MonitorConfig::cpuPollSeconds, "cpu_poll_seconds"),
           field(&SystemConfig::MonitorConfig::gpuPollSeconds, "gpu_poll_seconds"),
           field(&SystemConfig::MonitorConfig::memoryPollSeconds, "memory_poll_seconds"),
@@ -304,6 +321,7 @@ namespace noctalia::config::schema {
               },
               [](toml::table& tbl, const IdleBehaviorConfig& in) { tbl.insert_or_assign("action", in.action); }
           ),
+          field(&IdleBehaviorConfig::ignoreInhibitors, "ignore_inhibitors"),
           field(&IdleBehaviorConfig::command, "command"),
           field(&IdleBehaviorConfig::resumeCommand, "resume_command"),
           // Emitted only for a bare `suspend` that opts out of pre-suspend locking.
@@ -333,6 +351,7 @@ namespace noctalia::config::schema {
   const Schema<IdleConfig>& idleSchema() {
     static const Schema<IdleConfig> s = {
         field(&IdleConfig::preActionFadeSeconds, "pre_action_fade_seconds", Range<float>{0.0F, 120.0F}),
+        field(&IdleConfig::gamepadActivity, "gamepad_activity"),
         // behavior_order is emitted here (vector order); the actual reorder runs
         // last, after the behavior map has been read.
         custom<IdleConfig>(

@@ -8,17 +8,20 @@
 #include "calendar/calendar_service.h"
 #include "capture/screenshot_service.h"
 #include "compositors/compositor_platform.h"
+#include "compositors/kde/kde_lock_watcher.h"
 #include "compositors/keyboard_layout_poll_source.h"
 #include "compositors/workspace_alert_service.h"
 #include "compositors/workspace_poll_source.h"
 #include "config/config_poll_source.h"
 #include "config/config_service.h"
 #include "core/timer_manager.h"
+#include "dbus/launcher_entry/launcher_entry_service.h"
 #include "dbus/network/external_ip_service.h"
 #include "dbus/notification/notification_poll_source.h"
 #include "dbus/secret/secret_collection_probe.h"
 #include "hooks/battery_hook_state.h"
 #include "hooks/hook_manager.h"
+#include "idle/gamepad_activity.h"
 #include "idle/idle_grace_overlay.h"
 #include "idle/idle_inhibitor.h"
 #include "idle/idle_manager.h"
@@ -79,6 +82,7 @@
 #include "system/dependency_service.h"
 #include "system/desktop_entry_poll_source.h"
 #include "system/file_watcher.h"
+#include "system/game_mode.h"
 #include "system/gamma_service.h"
 #include "system/icon_theme_poll_source.h"
 #include "system/location_poll_source.h"
@@ -244,6 +248,7 @@ private:
   void onUpowerStateChangedForHooks();
   void onNetworkStateChangedForEvents(const NetworkState& state, NetworkChangeOrigin origin);
   void onBluetoothStateChangedForEvents(const BluetoothState& state, BluetoothStateChangeOrigin origin);
+  void applyGameMode(bool active);
   void onPowerProfileChangedForEvents(const PowerProfilesState& state, PowerProfilesChangeOrigin origin);
   std::vector<PollSource*> currentPollSources();
   std::vector<PollSource*> buildPollSources();
@@ -286,11 +291,19 @@ private:
   std::uint64_t m_outputPowerRequestGeneration = 0;
   std::unique_ptr<AccountsService> m_accountsService;
   std::unique_ptr<ScreenSaverService> m_screenSaverService;
+  std::unique_ptr<compositors::kde::KdeLockWatcher> m_kdeLockWatcher;
+  std::unique_ptr<LauncherEntryService> m_launcherEntries;
   std::unique_ptr<ScreenSaverPollSource> m_screenSaverPollSource;
   std::unique_ptr<SystemMonitorService> m_systemMonitor;
   std::unique_ptr<DebugService> m_debugService;
   IdleInhibitor m_idleInhibitor;
   IdleManager m_idleManager;
+  GamepadActivityMonitor m_gamepadMonitor;
+  GameMode m_gameMode;
+  // State saved on entering game mode so leaving restores exactly what was there.
+  bool m_gameModePrevDnd = false;
+  bool m_gameModeSetCaffeine = false;
+  std::string m_gameModePrevProfile;
   PluginIdleWatches m_pluginIdleWatches;
   IdleGraceOverlay m_idleGraceOverlay;
   std::uint64_t m_idleGraceOverlayGeneration = 0;

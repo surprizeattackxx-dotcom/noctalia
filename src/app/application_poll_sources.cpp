@@ -35,6 +35,7 @@ std::vector<PollSource*> Application::currentPollSources() {
   sources.push_back(&m_clipboardPollSource);
   sources.push_back(&m_timerPollSource);
   sources.push_back(&m_keyRepeatPollSource);
+  sources.push_back(&m_gamepadMonitor);
   sources.push_back(&m_workspacePollSource);
   sources.push_back(&m_keyboardLayoutPollSource);
   sources.push_back(&m_compositorPlatform.eventSubscriptions());

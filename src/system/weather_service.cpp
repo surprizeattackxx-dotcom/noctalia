@@ -7,6 +7,7 @@
 #include "time/time_format.h"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <chrono>
 #include <cmath>
@@ -186,6 +187,10 @@ namespace {
     return fallback;
   }
 
+  nlohmann::json optionalJson(const std::optional<double>& value) {
+    return value.has_value() ? nlohmann::json(*value) : nlohmann::json();
+  }
+
   nlohmann::json currentUnitsToJson(const WeatherCurrentUnits& units) {
     return nlohmann::json{
         {"time", units.time},
@@ -358,14 +363,144 @@ bool WeatherService::locationConfigured() const noexcept { return m_hasLocation;
 
 bool WeatherService::useImperial() const noexcept { return m_activeConfig.unit == "imperial"; }
 
+bool WeatherService::useFahrenheit() const noexcept {
+  if (m_activeConfig.temperatureUnit == "f") {
+    return true;
+  }
+  if (m_activeConfig.temperatureUnit == "c") {
+    return false;
+  }
+  return useImperial();
+}
+
 double WeatherService::displayTemperature(double celsius) const noexcept {
-  if (!useImperial()) {
+  if (!useFahrenheit()) {
     return celsius;
   }
   return 32.0 + (celsius * 1.8);
 }
 
-const char* WeatherService::displayTemperatureUnit() const noexcept { return useImperial() ? "\u00b0F" : "\u00b0C"; }
+const char* WeatherService::displayTemperatureUnit() const noexcept { return useFahrenheit() ? "\u00b0F" : "\u00b0C"; }
+
+std::string WeatherService::formatTemperature(double celsius) const {
+  return std::format("{}{}", static_cast<int>(std::lround(displayTemperature(celsius))), displayTemperatureUnit());
+}
+
+std::string WeatherService::formatWind(double kmh) const {
+  std::string unit = m_activeConfig.windUnit;
+  if (unit != "kmh" && unit != "mph" && unit != "ms" && unit != "kn") {
+    unit = useImperial() ? "mph" : "kmh";
+  }
+  if (unit == "mph") {
+    return std::format("{} mph", static_cast<int>(std::lround(kmh * 0.621371)));
+  }
+  if (unit == "ms") {
+    return std::format("{:.1F} m/s", kmh / 3.6);
+  }
+  if (unit == "kn") {
+    return std::format("{} kn", static_cast<int>(std::lround(kmh * 0.539957)));
+  }
+  return std::format("{} km/h", static_cast<int>(std::lround(kmh)));
+}
+
+std::string WeatherService::formatPressure(double hpa) const {
+  std::string unit = m_activeConfig.pressureUnit;
+  if (unit != "hpa" && unit != "inhg" && unit != "mmhg" && unit != "kpa") {
+    unit = useImperial() ? "inhg" : "hpa";
+  }
+  if (unit == "inhg") {
+    return std::format("{:.2F} inHg", hpa * 0.0295300);
+  }
+  if (unit == "mmhg") {
+    return std::format("{} mmHg", static_cast<int>(std::lround(hpa * 0.750062)));
+  }
+  if (unit == "kpa") {
+    return std::format("{:.1F} kPa", hpa / 10.0);
+  }
+  return std::format("{} hPa", static_cast<int>(std::lround(hpa)));
+}
+
+std::string WeatherService::formatVisibility(double meters) const {
+  if (useImperial()) {
+    return std::format("{:.1F} mi", meters / 1609.344);
+  }
+  if (meters >= 10000.0) {
+    return std::format("{} km", static_cast<int>(std::lround(meters / 1000.0)));
+  }
+  return std::format("{:.1F} km", meters / 1000.0);
+}
+
+std::string WeatherService::formatPrecipitation(double mm) const {
+  if (useImperial()) {
+    return std::format("{:.2F} in", mm / 25.4);
+  }
+  return std::format("{:.1F} mm", mm);
+}
+
+std::string WeatherService::dewPointComfort(double dewPointC) {
+  // Thresholds follow the common US forecast scale (50/60/65/70 F).
+  if (dewPointC < 10.0) {
+    return i18n::tr("weather.comfort.dry");
+  }
+  if (dewPointC < 15.5) {
+    return i18n::tr("weather.comfort.comfortable");
+  }
+  if (dewPointC < 18.5) {
+    return i18n::tr("weather.comfort.humid");
+  }
+  if (dewPointC < 21.0) {
+    return i18n::tr("weather.comfort.muggy");
+  }
+  return i18n::tr("weather.comfort.oppressive");
+}
+
+std::string WeatherService::airQualityLabel(std::int32_t usAqi) {
+  if (usAqi <= 50) {
+    return i18n::tr("weather.aqi.good");
+  }
+  if (usAqi <= 100) {
+    return i18n::tr("weather.aqi.moderate");
+  }
+  if (usAqi <= 150) {
+    return i18n::tr("weather.aqi.unhealthy-sensitive");
+  }
+  if (usAqi <= 200) {
+    return i18n::tr("weather.aqi.unhealthy");
+  }
+  if (usAqi <= 300) {
+    return i18n::tr("weather.aqi.very-unhealthy");
+  }
+  return i18n::tr("weather.aqi.hazardous");
+}
+
+std::string WeatherService::compassLabel(std::int32_t degrees) {
+  static constexpr std::array<const char*, 8> kDirs = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
+  const int normalized = ((degrees % 360) + 360) % 360;
+  return kDirs[static_cast<std::size_t>(std::lround(normalized / 45.0)) % 8];
+}
+
+WeatherMoon WeatherService::moonPhase(std::chrono::system_clock::time_point at) {
+  // Mean synodic month from a known new moon (2000-01-06 18:14 UTC); accurate to about a day, which is
+  // plenty for a phase name and an illumination percentage.
+  constexpr double kSynodicDays = 29.530588853;
+  constexpr double kEpochUnix = 947182440.0;
+  const double unix = std::chrono::duration<double>(at.time_since_epoch()).count();
+  double age = std::fmod((unix - kEpochUnix) / 86400.0, kSynodicDays);
+  if (age < 0.0) {
+    age += kSynodicDays;
+  }
+  const double phase = age / kSynodicDays; // 0 new, 0.5 full
+  WeatherMoon moon;
+  moon.ageDays = age;
+  moon.illumination = (1.0 - std::cos(phase * 2.0 * M_PI)) / 2.0;
+  const int segment = static_cast<int>(std::floor(phase * 8.0 + 0.5)) % 8;
+  static constexpr std::array<const char*, 8> kKeys = {
+      "new",  "waxing-crescent", "first-quarter", "waxing-gibbous",
+      "full", "waning-gibbous",  "last-quarter",  "waning-crescent",
+  };
+  moon.name = i18n::tr(std::string("weather.moon.") + kKeys[static_cast<std::size_t>(segment)]);
+  return moon;
+}
 
 std::string_view WeatherService::glyphForCode(std::int32_t code, bool isDay) {
   if (code == 0) {
@@ -509,9 +644,10 @@ void WeatherService::startWeatherFetch() {
   const std::string url = std::format(
       "https://api.open-meteo.com/v1/forecast?latitude={}&longitude={}"
       "&current=temperature_2m,apparent_temperature,wind_speed_10m,wind_direction_10m,weather_code,is_day,uv_index,"
-      "relative_humidity_2m"
+      "relative_humidity_2m,dew_point_2m,pressure_msl,cloud_cover,wind_gusts_10m,precipitation,visibility"
       "&hourly=temperature_2m,relative_humidity_2m,precipitation_probability,weather_code,is_day,wind_speed_10m"
-      "&daily=temperature_2m_max,temperature_2m_min,weather_code,sunrise,sunset"
+      "&daily=temperature_2m_max,temperature_2m_min,weather_code,sunrise,sunset,precipitation_probability_max,"
+      "precipitation_sum,uv_index_max,wind_gusts_10m_max"
       "&forecast_days={}&forecast_hours={}&timezone=auto",
       formatCoordinate(m_resolvedLatitude), formatCoordinate(m_resolvedLongitude), kForecastDays, kForecastHours
   );
@@ -609,6 +745,16 @@ void WeatherService::handleWeatherResponse(const std::filesystem::path& path, bo
     next.current.weatherCode = readInt(current, "weather_code");
     next.current.uvIndex = readOptionalNumber(current, "uv_index");
     next.current.relativeHumidityPercent = readOptionalInt(current, "relative_humidity_2m");
+    next.current.dewPointC = findNumber(current, "dew_point_2m");
+    next.current.pressureHpa = findNumber(current, "pressure_msl");
+    next.current.windGustKmh = findNumber(current, "wind_gusts_10m");
+    next.current.precipitationMm = findNumber(current, "precipitation");
+    next.current.visibilityM = findNumber(current, "visibility");
+    if (const auto cloud = findNumber(current, "cloud_cover"); cloud.has_value()) {
+      next.current.cloudCoverPercent = static_cast<std::int32_t>(std::lround(*cloud));
+    }
+    // Keep the air quality from the previous snapshot until the new response lands.
+    next.airQuality = m_snapshot.airQuality;
     next.fetchedAt = Clock::now();
 
     const std::size_t hourCount = std::min(
@@ -644,20 +790,32 @@ void WeatherService::handleWeatherResponse(const std::filesystem::path& path, bo
         {dates.size(), tempsMax.size(), tempsMin.size(), codes.size(), sunrises.size(), sunsets.size(), kForecastDays}
     );
     next.forecastDays.reserve(count);
+    const auto dailyNumber = [&daily](const char* key, std::size_t i) -> std::optional<double> {
+      const auto it = daily.find(key);
+      if (it == daily.end() || !it->is_array() || i >= it->size() || !(*it)[i].is_number()) {
+        return std::nullopt;
+      }
+      return (*it)[i].get<double>();
+    };
     for (std::size_t i = 0; i < count; ++i) {
       if (!dates[i].is_string() || !tempsMax[i].is_number() || !tempsMin[i].is_number() || !codes[i].is_number()) {
         continue;
       }
-      next.forecastDays.push_back(
-          WeatherForecastDay{
-              .dateIso = dates[i].get<std::string>(),
-              .weatherCode = codes[i].get<std::int32_t>(),
-              .temperatureMaxC = tempsMax[i].get<double>(),
-              .temperatureMinC = tempsMin[i].get<double>(),
-              .sunriseIso = sunrises[i].is_string() ? sunrises[i].get<std::string>() : std::string{},
-              .sunsetIso = sunsets[i].is_string() ? sunsets[i].get<std::string>() : std::string{},
-          }
-      );
+      WeatherForecastDay day{
+          .dateIso = dates[i].get<std::string>(),
+          .weatherCode = codes[i].get<std::int32_t>(),
+          .temperatureMaxC = tempsMax[i].get<double>(),
+          .temperatureMinC = tempsMin[i].get<double>(),
+          .sunriseIso = sunrises[i].is_string() ? sunrises[i].get<std::string>() : std::string{},
+          .sunsetIso = sunsets[i].is_string() ? sunsets[i].get<std::string>() : std::string{},
+      };
+      if (const auto chance = dailyNumber("precipitation_probability_max", i); chance.has_value()) {
+        day.precipitationProbabilityMaxPercent = static_cast<std::int32_t>(std::lround(*chance));
+      }
+      day.precipitationSumMm = dailyNumber("precipitation_sum", i);
+      day.uvIndexMax = dailyNumber("uv_index_max", i);
+      day.windGustMaxKmh = dailyNumber("wind_gusts_10m_max", i);
+      next.forecastDays.push_back(std::move(day));
     }
     dropPastForecastDays(next);
 
@@ -667,11 +825,103 @@ void WeatherService::handleWeatherResponse(const std::filesystem::path& path, bo
     m_nextRefreshAt = Clock::now() + std::chrono::minutes(std::max(5, m_activeConfig.refreshMinutes));
     saveCache();
     notifyChanged();
+    evaluateRainAlert();
+    startAirQualityFetch();
   } catch (const std::exception& e) {
     m_error = i18n::tr("weather.errors.parse-weather");
     scheduleRetryAfterFailure();
     kLog.warn("{}: {}", m_error, e.what());
     notifyChanged();
+  }
+}
+
+void WeatherService::evaluateRainAlert() {
+  if (!m_activeConfig.rainAlert || !m_snapshot.valid || m_snapshot.forecastHours.empty()) {
+    m_rainAlertActive = false;
+    return;
+  }
+  const std::int32_t threshold = m_activeConfig.rainAlertPercent;
+  const std::size_t window = static_cast<std::size_t>(std::max(1, m_activeConfig.rainAlertHours));
+  const auto& hours = m_snapshot.forecastHours;
+  // forecastHours[0] is the current hour (past hours were dropped); a spell already under way is not "soon".
+  const bool raining = hours.front().precipitationProbabilityPercent >= threshold;
+  const std::size_t last = std::min(window, hours.size() - 1);
+  std::size_t hit = 0;
+  for (std::size_t i = 1; i <= last; ++i) {
+    if (hours[i].precipitationProbabilityPercent >= threshold) {
+      hit = i;
+      break;
+    }
+  }
+  if (hit == 0 || raining) {
+    // Nothing coming, or it is already underway: arm again once it has cleared.
+    if (hit == 0 && !raining) {
+      m_rainAlertActive = false;
+    }
+    return;
+  }
+  if (m_rainAlertActive) {
+    return;
+  }
+  m_rainAlertActive = true;
+  const auto& hour = hours[hit];
+  kLog.info("rain alert: {}% chance at {} (in {} h)", hour.precipitationProbabilityPercent, hour.timeIso, hit);
+  const std::int32_t code = hour.weatherCode;
+  if (m_rainAlertCallback) {
+    m_rainAlertCallback(
+        WeatherRainAlert{
+            .timeIso = hour.timeIso,
+            .hoursAhead = static_cast<std::int32_t>(hit),
+            .percent = hour.precipitationProbabilityPercent,
+            .weatherCode = code,
+            .snow = (code >= 71 && code <= 77) || code == 85 || code == 86,
+        }
+    );
+  }
+}
+
+void WeatherService::startAirQualityFetch() {
+  if (!m_activeConfig.airQuality || !m_snapshot.valid) {
+    m_snapshot.airQuality = WeatherAirQuality{};
+    return;
+  }
+  const auto path = transportCacheDir() / "air_quality.json";
+  const std::string url = std::format(
+      "https://air-quality-api.open-meteo.com/v1/air-quality?latitude={}&longitude={}"
+      "&current=us_aqi,pm2_5,pm10,ozone&timezone=auto",
+      formatCoordinate(m_resolvedLatitude), formatCoordinate(m_resolvedLongitude)
+  );
+  const std::uint64_t serial = ++m_airQualitySerial;
+  m_httpClient.download(url, path, [this, path, serial](bool success) {
+    handleAirQualityResponse(path, success, serial);
+  });
+}
+
+void WeatherService::handleAirQualityResponse(const std::filesystem::path& path, bool success, std::uint64_t serial) {
+  if (serial != m_airQualitySerial || !m_activeConfig.enabled || !m_snapshot.valid) {
+    return;
+  }
+  if (!success) {
+    kLog.debug("air quality fetch failed; keeping the previous value");
+    return;
+  }
+  try {
+    std::ifstream file(path);
+    const auto json = nlohmann::json::parse(file);
+    const auto& current = json.at("current");
+    WeatherAirQuality aq;
+    if (const auto aqi = findNumber(current, "us_aqi"); aqi.has_value()) {
+      aq.valid = true;
+      aq.usAqi = static_cast<std::int32_t>(std::lround(*aqi));
+      aq.pm25 = readOptionalNumber(current, "pm2_5");
+      aq.pm10 = readOptionalNumber(current, "pm10");
+      aq.ozone = readOptionalNumber(current, "ozone");
+    }
+    m_snapshot.airQuality = aq;
+    saveCache();
+    notifyChanged();
+  } catch (const std::exception& e) {
+    kLog.debug("air quality parse failed: {}", e.what());
   }
 }
 
@@ -751,6 +1001,19 @@ void WeatherService::loadCache() {
       m_snapshot.current.weatherCode = readOptionalInt(*it, "weather_code");
       m_snapshot.current.uvIndex = readOptionalNumber(*it, "uv_index");
       m_snapshot.current.relativeHumidityPercent = readOptionalInt(*it, "relative_humidity_percent");
+      m_snapshot.current.dewPointC = findNumber(*it, "dew_point_c");
+      m_snapshot.current.pressureHpa = findNumber(*it, "pressure_hpa");
+      m_snapshot.current.windGustKmh = findNumber(*it, "wind_gust_kmh");
+      m_snapshot.current.precipitationMm = findNumber(*it, "precipitation_mm");
+      m_snapshot.current.visibilityM = findNumber(*it, "visibility_m");
+      m_snapshot.current.cloudCoverPercent = readOptionalInt(*it, "cloud_cover_percent", -1);
+    }
+    if (const auto it = snapshot.find("air_quality"); it != snapshot.end() && it->is_object()) {
+      m_snapshot.airQuality.valid = readBool(*it, "valid");
+      m_snapshot.airQuality.usAqi = readOptionalInt(*it, "us_aqi");
+      m_snapshot.airQuality.pm25 = readOptionalNumber(*it, "pm25");
+      m_snapshot.airQuality.pm10 = readOptionalNumber(*it, "pm10");
+      m_snapshot.airQuality.ozone = readOptionalNumber(*it, "ozone");
     }
     if (const auto it = snapshot.find("forecast_hours"); it != snapshot.end() && it->is_array()) {
       m_snapshot.forecastHours.clear();
@@ -785,6 +1048,11 @@ void WeatherService::loadCache() {
                 .temperatureMinC = readOptionalNumber(item, "temperature_min_c"),
                 .sunriseIso = readString(item, "sunrise_iso"),
                 .sunsetIso = readString(item, "sunset_iso"),
+                .precipitationProbabilityMaxPercent =
+                    readOptionalInt(item, "precipitation_probability_max_percent", -1),
+                .precipitationSumMm = findNumber(item, "precipitation_sum_mm"),
+                .uvIndexMax = findNumber(item, "uv_index_max"),
+                .windGustMaxKmh = findNumber(item, "wind_gust_max_kmh"),
             }
         );
       }
@@ -846,6 +1114,20 @@ void WeatherService::saveCache() const {
                 {"weather_code", m_snapshot.current.weatherCode},
                 {"uv_index", m_snapshot.current.uvIndex},
                 {"relative_humidity_percent", m_snapshot.current.relativeHumidityPercent},
+                {"dew_point_c", optionalJson(m_snapshot.current.dewPointC)},
+                {"pressure_hpa", optionalJson(m_snapshot.current.pressureHpa)},
+                {"wind_gust_kmh", optionalJson(m_snapshot.current.windGustKmh)},
+                {"precipitation_mm", optionalJson(m_snapshot.current.precipitationMm)},
+                {"visibility_m", optionalJson(m_snapshot.current.visibilityM)},
+                {"cloud_cover_percent", m_snapshot.current.cloudCoverPercent},
+            }},
+           {"air_quality",
+            {
+                {"valid", m_snapshot.airQuality.valid},
+                {"us_aqi", m_snapshot.airQuality.usAqi},
+                {"pm25", m_snapshot.airQuality.pm25},
+                {"pm10", m_snapshot.airQuality.pm10},
+                {"ozone", m_snapshot.airQuality.ozone},
             }},
            {"forecast_hours", nlohmann::json::array()},
            {"forecast_days", nlohmann::json::array()},
@@ -873,6 +1155,10 @@ void WeatherService::saveCache() const {
         {"temperature_min_c", day.temperatureMinC},
         {"sunrise_iso", day.sunriseIso},
         {"sunset_iso", day.sunsetIso},
+        {"precipitation_probability_max_percent", day.precipitationProbabilityMaxPercent},
+        {"precipitation_sum_mm", optionalJson(day.precipitationSumMm)},
+        {"uv_index_max", optionalJson(day.uvIndexMax)},
+        {"wind_gust_max_kmh", optionalJson(day.windGustMaxKmh)},
     });
   }
 

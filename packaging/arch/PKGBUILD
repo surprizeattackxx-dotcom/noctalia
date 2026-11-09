@@ -1,0 +1,39 @@
+# Maintainer: donnie <surprizeattackxx@gmail.com>
+# Noctalia with KDE Plasma fixes (per-monitor taskbar, KDE lock/logout/reboot/shutdown, screen-off).
+pkgname=noctalia-kde
+_upstream=noctalia
+pkgver=5.4.1
+pkgrel=1
+pkgdesc="A sleek, customizable desktop shell crafted for Wayland."
+arch=('x86_64' 'aarch64')
+url="https://github.com/surprizeattackxx-dotcom/noctalia"
+license=('MIT')
+depends=(bash cairo curl fontconfig freetype2 git glib2 glibc harfbuzz hicolor-icon-theme jemalloc
+         libgcc libglvnd libical libjxl libpipewire libqalculate librsvg libsecret libsndfile
+         libsodium libstdc++ libwebp libwireplumber libxkbcommon libxml2 md4c pam polkit
+         sdbus-cpp tomlplusplus wayland)
+makedepends=(meson ninja gcc wayland-protocols nlohmann-json stb)
+optdepends=('ddcutil: monitor brightness control (KDE already drives monitors through powerdevil)')
+provides=("noctalia=${pkgver}")
+conflicts=('noctalia')
+source=("git+${url}.git#branch=kde")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd "$srcdir/$_upstream"
+  tr -d '\n' < VERSION
+}
+
+build() {
+  arch-meson "$srcdir/$_upstream" build -Dtests=disabled
+  meson compile -C build
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+  install -Dm644 "$srcdir/$_upstream/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  # completions are a packaging step upstream (see PACKAGING.md)
+  build/noctalia completions bash | install -Dm644 /dev/stdin "$pkgdir/usr/share/bash-completion/completions/noctalia"
+  build/noctalia completions zsh  | install -Dm644 /dev/stdin "$pkgdir/usr/share/zsh/site-functions/_noctalia"
+  build/noctalia completions fish | install -Dm644 /dev/stdin "$pkgdir/usr/share/fish/vendor_completions.d/noctalia.fish"
+}

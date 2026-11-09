@@ -1,5 +1,6 @@
 #include "idle/idle_inhibitor.h"
 
+#include "compositors/compositor_detect.h"
 #include "core/log.h"
 #include "dbus/logind/logind_service.h"
 #include "idle-inhibit-unstable-v1-client-protocol.h"
@@ -74,7 +75,8 @@ void IdleInhibitor::syncInhibitor(bool logTransitions) {
   }
 
   syncLogindInhibit(logTransitions);
-  if (m_logind != nullptr && m_logind->hasIdleInhibit()) {
+  // KWin and powerdevil ignore logind idle inhibitors; only the Wayland idle-inhibit protocol reaches them.
+  if (!compositors::isKde() && m_logind != nullptr && m_logind->hasIdleInhibit()) {
     destroyWaylandInhibitors(false);
     return;
   }

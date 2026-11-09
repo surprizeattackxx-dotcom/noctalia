@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+struct org_kde_kwin_fake_input;
 struct wl_seat;
 struct zwp_virtual_keyboard_manager_v1;
 struct zwp_virtual_keyboard_v1;
@@ -23,6 +24,8 @@ public:
   VirtualKeyboardService& operator=(const VirtualKeyboardService&) = delete;
 
   bool bind(zwp_virtual_keyboard_manager_v1* manager, wl_seat* seat);
+  // KDE: KWin has no virtual-keyboard protocol, so paste shortcuts go through org_kde_kwin_fake_input.
+  bool bindKdeFakeInput(org_kde_kwin_fake_input* fakeInput);
   void cleanup();
 
   bool isAvailable() const noexcept;
@@ -32,12 +35,14 @@ private:
   [[nodiscard]] bool ensureKeyboard();
   [[nodiscard]] bool ensureKeymap();
   void pressChord(std::uint32_t key, bool ctrlPressed, bool shiftPressed);
+  [[nodiscard]] bool sendFakeInputPaste(VirtualPasteShortcut shortcut);
   void sendKey(std::uint32_t key, bool pressed);
   void updateModifiers(bool ctrlPressed, bool shiftPressed);
 
   zwp_virtual_keyboard_manager_v1* m_manager = nullptr;
   wl_seat* m_seat = nullptr;
   zwp_virtual_keyboard_v1* m_keyboard = nullptr;
+  org_kde_kwin_fake_input* m_kdeFakeInput = nullptr;
   xkb_context* m_xkbContext = nullptr;
   xkb_keymap* m_xkbKeymap = nullptr;
   std::uint32_t m_ctrlMask = 0;
