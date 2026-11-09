@@ -160,6 +160,14 @@ void Application::initIpc() {
       IpcService::HandlerOptions{.actionEditorVisibility = IpcService::ActionEditorVisibility::Hidden}
   );
 
+  m_ipcService.bind(noctalia::cli::msg::launcherClearRecent, [this](const std::string&) -> std::string {
+    if (m_launcherPanel == nullptr) {
+      return "error: launcher unavailable\n";
+    }
+    m_launcherPanel->clearRecentlyUsed();
+    return "ok\n";
+  });
+
   m_ipcService.bind(noctalia::cli::msg::notificationClearActive, [this](const std::string&) -> std::string {
     std::vector<uint32_t> activeIds;
     activeIds.reserve(m_notificationManager.all().size());

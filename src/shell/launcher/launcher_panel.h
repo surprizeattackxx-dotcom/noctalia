@@ -54,6 +54,7 @@ public:
   void onIconThemeChanged() override;
 
   void clearUsage();
+  void clearRecentlyUsed();
   void syncUsageOrderingState();
 
   // Invoked after a terminal close when the activation copied text and the provider
@@ -158,6 +159,7 @@ private:
   Image* m_launcherAvatar = nullptr;
   Glyph* m_launcherAvatarFallback = nullptr;
   Button* m_launcherSettingsButton = nullptr;
+  Button* m_launcherClearRecentsButton = nullptr;
   Button* m_launcherUsageButton = nullptr;
   Button* m_launcherGridButton = nullptr;
   Button* m_launcherPowerButton = nullptr;
