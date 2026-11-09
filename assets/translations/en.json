@@ -4629,6 +4629,10 @@
           "taskbar-description": "Only highlight the active workspace on the monitor that has keyboard or pointer focus; active workspaces on other monitors use the occupied color and the inactive capsule style",
           "workspaces-description": "Only highlight the active workspace on the monitor that has keyboard or pointer focus; other monitors show their active workspace as occupied instead"
         },
+        "follow-focused-output": {
+          "description": "Show the windows and workspaces of whichever monitor has focus, instead of this bar's own monitor",
+          "label": "Follow Focused Monitor"
+        },
         "font-family": {
           "description": "Typeface for this widget; leave empty to inherit the bar font",
           "label": "Font Family"

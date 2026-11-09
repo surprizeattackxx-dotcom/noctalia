@@ -260,6 +260,29 @@ const noctalia::bar::WidgetDefinition<TaskbarWidgetOptions>& taskbarWidgetDefini
                                   true, "settings.widgets.settings.minimal.taskbar-description"
                               ),
                           }),
+                          field<&Options::workspaceLabelSource>(
+                              {
+                                  .key = "label_source",
+                                  .choices =
+                                      {
+                                          {
+                                              .value = TaskbarWorkspaceLabelSource::Name,
+                                              .configValue = "name",
+                                              .labelKey = "settings.widgets.options.name",
+                                          },
+                                          {
+                                              .value = TaskbarWorkspaceLabelSource::Id,
+                                              .configValue = "id",
+                                              .labelKey = "settings.widgets.options.id",
+                                          },
+                                      },
+                                  .presentation = presentation("taskbar.workspace-labels", groupedOnly(), true),
+                              }
+                          ),
+                          field<&Options::followFocusedOutput>({
+                              .key = "follow_focused_output",
+                              .presentation = presentation("taskbar.windows"),
+                          }),
                           field<&Options::focusedOutputOnly>({
                               .key = "focused_output_only",
                               .presentation = presentation(

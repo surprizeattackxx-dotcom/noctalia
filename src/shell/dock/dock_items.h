@@ -67,6 +67,8 @@ namespace shell::dock {
     std::function<void(DockInstance&, const DockItemAction&)> activateOrLaunch;
     std::function<void(DockInstance&)> toggleLauncher;
     std::function<void(DockInstance&, const DockItemAction&)> openItemMenu;
+    // Middle click: open a new window/instance even when the app is already running.
+    std::function<void(DockInstance&, const DockItemAction&)> launchNew;
     // Drag-to-reorder: only called when the source item is pinned.
     std::function<void(DockInstance&, std::size_t itemIndex, float mainPos)> beginDrag;
     std::function<void(DockInstance&, float mainPos)> updateDrag;

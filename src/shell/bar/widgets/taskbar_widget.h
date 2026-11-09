@@ -33,6 +33,11 @@ enum class WorkspaceLabelPlacement {
   Inside,
 };
 
+enum class TaskbarWorkspaceLabelSource {
+  Name,
+  Id,
+};
+
 enum class WorkspaceGroupContent {
   Icons,
   Count,
@@ -52,6 +57,9 @@ struct TaskbarWidgetOptions {
   std::vector<std::string> hiddenWorkspaces;
   bool workspaceGroupCapsule = true;
   bool focusedOutputOnly = false;
+  // Show the windows and workspaces of whichever monitor has focus instead of the bar's own monitor.
+  bool followFocusedOutput = false;
+  TaskbarWorkspaceLabelSource workspaceLabelSource = TaskbarWorkspaceLabelSource::Name;
   bool minimal = false;
   bool groupSingleIconPerApp = false;
   bool showActiveIndicator = true;
@@ -197,6 +205,8 @@ private:
   [[nodiscard]] static std::string toLower(const std::string& value);
   [[nodiscard]] static const std::string& displayTitle(const TaskModel& task) noexcept;
   [[nodiscard]] static std::string workspaceLabel(const Workspace& workspace, std::size_t index);
+  // The monitor whose windows and workspaces this widget shows: its own, or the focused one.
+  [[nodiscard]] wl_output* effectiveOutput() const noexcept;
   [[nodiscard]] static ModelComparison compareModels(
       bool groupByWorkspace, const std::vector<TaskModel>& previousTasks,
       const std::vector<WorkspaceModel>& previousWorkspaces, const std::vector<TaskModel>& nextTasks,

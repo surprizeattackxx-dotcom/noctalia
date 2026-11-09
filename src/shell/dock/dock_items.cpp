@@ -675,7 +675,7 @@ namespace shell::dock {
 
       item.tooltipText = dockItemTooltipText(model);
       configureDockTooltip(*areaNode, cfg, item.tooltipText);
-      areaNode->setAcceptedButtons(InputArea::buttonMask({BTN_LEFT, BTN_RIGHT}));
+      areaNode->setAcceptedButtons(InputArea::buttonMask({BTN_LEFT, BTN_RIGHT, BTN_MIDDLE}));
       const bool itemPinned = itemIndex < pinnedCount;
       areaNode->setOnPress([instPtr, clickContext, itemIndex, itemPinned](const InputArea::PointerData& d) {
         if (d.button != BTN_LEFT) {
@@ -745,6 +745,12 @@ namespace shell::dock {
         if (d.button == BTN_RIGHT) {
           if (clickContext->callbacks.openItemMenu) {
             clickContext->callbacks.openItemMenu(*instPtr, action);
+          }
+          return;
+        }
+        if (d.button == BTN_MIDDLE) {
+          if (clickContext->callbacks.launchNew) {
+            clickContext->callbacks.launchNew(*instPtr, action);
           }
           return;
         }

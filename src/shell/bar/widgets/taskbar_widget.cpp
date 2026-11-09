@@ -825,7 +825,7 @@ void TaskbarWidget::doLayout(Renderer& renderer, float containerWidth, float con
 
 void TaskbarWidget::doUpdate(Renderer& /*renderer*/) {
   updateModels();
-  if (m_focusedOutputOnly) {
+  if (m_focusedOutputOnly || m_configOptions.followFocusedOutput) {
     // Focus moving between two other outputs changes which workspace is styled as focused.
     wl_output* focusedOutput = m_platform.preferredInteractiveOutput();
     if (focusedOutput != m_lastFocusedOutput) {
@@ -1835,7 +1835,7 @@ void TaskbarWidget::updateModels() {
       if (wo.output == nullptr) {
         continue;
       }
-      if (!m_showAllOutputs && wo.output != m_output) {
+      if (!m_showAllOutputs && wo.output != effectiveOutput()) {
         continue;
       }
       monitorOrdinal.emplace(wo.output, nextOrdinal++);
@@ -1845,7 +1845,7 @@ void TaskbarWidget::updateModels() {
       if (wo.output == nullptr) {
         continue;
       }
-      if (!m_showAllOutputs && wo.output != m_output) {
+      if (!m_showAllOutputs && wo.output != effectiveOutput()) {
         continue;
       }
       const auto workspaces = m_platform.workspaces(wo.output);
@@ -1857,9 +1857,24 @@ void TaskbarWidget::updateModels() {
         item.workspace = workspaces[i];
         item.hostOutput = wo.output;
         const std::string fallbackLabel = workspaceLabel(item.workspace, i);
-        const std::string label = compositors::isKde() && item.workspace.index > 0
+        std::string label = compositors::isKde() && item.workspace.index > 0
             ? std::to_string(item.workspace.index)
             : (i < displayKeys.size() && !displayKeys[i].empty() ? displayKeys[i] : fallbackLabel);
+        if (m_configOptions.workspaceLabelSource == TaskbarWorkspaceLabelSource::Id) {
+          // Number the workspace by its position even when it has a name (niri named workspaces, etc.).
+          if (item.workspace.index > 0) {
+            label = std::to_string(item.workspace.index);
+          } else if (!item.workspace.coordinates.empty()) {
+            label = std::to_string(static_cast<std::size_t>(item.workspace.coordinates.front()) + 1U);
+          } else if (
+              const std::string numeric = workspaceLabel(Workspace{.id = item.workspace.id}, i);
+              !numeric.empty() && std::isdigit(static_cast<unsigned char>(numeric.front())) != 0
+          ) {
+            label = numeric;
+          } else {
+            label = std::to_string(i + 1);
+          }
+        }
         const std::string baseKey = compositors::isKde() && !item.workspace.id.empty()
             ? item.workspace.id
             : (i < displayKeys.size() && !displayKeys[i].empty() ? displayKeys[i] : fallbackLabel);
@@ -1896,8 +1911,8 @@ void TaskbarWidget::updateModels() {
         }
       }
     } else {
-      runningByWorkspace = m_platform.appIdsByWorkspace(m_output);
-      workspaceAssignments = m_platform.workspaceWindowAssignments(m_output);
+      runningByWorkspace = m_platform.appIdsByWorkspace(effectiveOutput());
+      workspaceAssignments = m_platform.workspaceWindowAssignments(effectiveOutput());
     }
 
     std::unordered_map<std::string, std::size_t> workspaceKeyToOrder;
@@ -2143,7 +2158,7 @@ void TaskbarWidget::updateModels() {
           }
         }
       } else {
-        assignedByHandle = m_platform.assignTaskbarWindows(candidates, m_output);
+        assignedByHandle = m_platform.assignTaskbarWindows(candidates, effectiveOutput());
       }
       std::vector<bool> representedAssignments(workspaceAssignments.size(), false);
 
@@ -3138,10 +3153,15 @@ void TaskbarWidget::openTaskContextMenu(const TaskModel& task, InputArea& area, 
         );
       }
       for (const auto& desktop : desktops) {
-        entries.push_back(ContextMenuControlEntry{
-            .id = moveId,
-            .label = i18n::tr("dock.actions.move-to-desktop", "name", desktop.name.empty() ? std::to_string(desktop.index) : desktop.name),
-        });
+        entries.push_back(
+            ContextMenuControlEntry{
+                .id = moveId,
+                .label = i18n::tr(
+                    "dock.actions.move-to-desktop", "name",
+                    desktop.name.empty() ? std::to_string(desktop.index) : desktop.name
+                ),
+            }
+        );
         moveDesktopActions.emplace(moveId, static_cast<int>(desktop.index));
         ++moveId;
       }
@@ -3159,9 +3179,11 @@ void TaskbarWidget::openTaskContextMenu(const TaskModel& task, InputArea& area, 
         if (output.connectorName.empty() || output.connectorName == currentOutput) {
           continue;
         }
-        entries.push_back(ContextMenuControlEntry{
-            .id = outputId, .label = i18n::tr("dock.actions.move-to-output", "name", output.connectorName)
-        });
+        entries.push_back(
+            ContextMenuControlEntry{
+                .id = outputId, .label = i18n::tr("dock.actions.move-to-output", "name", output.connectorName)
+            }
+        );
         moveOutputActions.emplace(outputId, output.connectorName);
         ++outputId;
       }
@@ -3204,7 +3226,8 @@ void TaskbarWidget::openTaskContextMenu(const TaskModel& task, InputArea& area, 
   }
   m_contextMenuPopup->setShadowConfig(m_configService.config().shell.shadow);
   m_contextMenuPopup->setOnActivate([this, entryActions, entryAppName, entryWorkingDir, entryTerminal, menuEntry,
-                                     isPinned, infoClose, minimizeActions, moveDesktopActions, moveOutputActions](const ContextMenuControlEntry& entry) {
+                                     isPinned, infoClose, minimizeActions, moveDesktopActions,
+                                     moveOutputActions](const ContextMenuControlEntry& entry) {
     if (const auto move = moveDesktopActions.find(entry.id); move != moveDesktopActions.end()) {
       m_platform.moveKdeWindowToDesktop(m_contextMenuInfoPrimary.identifier, move->second);
       return;
@@ -3559,7 +3582,7 @@ bool TaskbarWidget::activeWorkspaceIndex(std::size_t& index) const {
 
   // Fallback to the active workspace on the current output
   for (std::size_t i = 0; i < workspaces.size(); ++i) {
-    if (workspaces[i].workspace.active && workspaces[i].hostOutput == m_output) {
+    if (workspaces[i].workspace.active && workspaces[i].hostOutput == effectiveOutput()) {
       index = i;
       return true;
     }
@@ -3650,7 +3673,18 @@ void TaskbarWidget::activateAdjacentTask(int direction) {
   }
 }
 
-wl_output* TaskbarWidget::toplevelOutputFilter() const noexcept { return m_showAllOutputs ? nullptr : m_output; }
+wl_output* TaskbarWidget::effectiveOutput() const noexcept {
+  if (m_configOptions.followFocusedOutput) {
+    if (wl_output* focused = m_platform.preferredInteractiveOutput(); focused != nullptr) {
+      return focused;
+    }
+  }
+  return m_output;
+}
+
+wl_output* TaskbarWidget::toplevelOutputFilter() const noexcept {
+  return m_showAllOutputs ? nullptr : effectiveOutput();
+}
 
 bool TaskbarWidget::useMultiOutputWorkspaceKeys() const noexcept {
   if (!m_showAllOutputs) {
@@ -3680,7 +3714,7 @@ std::string TaskbarWidget::workspaceKeyPrefixForOutput(wl_output* out) const {
 }
 
 wl_output* TaskbarWidget::workspaceHostOutput(const WorkspaceModel& model) const noexcept {
-  return model.hostOutput != nullptr ? model.hostOutput : m_output;
+  return model.hostOutput != nullptr ? model.hostOutput : effectiveOutput();
 }
 
 bool TaskbarWidget::workspaceUsesFocusedStyle(const WorkspaceModel& model) const noexcept {

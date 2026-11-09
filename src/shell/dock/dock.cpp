@@ -935,6 +935,9 @@ void Dock::rebuildItems(shell::dock::DockInstance& instance) {
           .openItemMenu = [this](
                               shell::dock::DockInstance& inst, const shell::dock::DockItemAction& action
                           ) { openItemMenu(inst, action); },
+          .launchNew = [this](
+                           shell::dock::DockInstance& inst, const shell::dock::DockItemAction& action
+                       ) { launchNewItem(inst, action); },
           .beginDrag = [this](
                            shell::dock::DockInstance& inst, std::size_t index, float mainPos
                        ) { beginDrag(inst, index, mainPos); },
@@ -1159,6 +1162,24 @@ void Dock::tryFulfillPendingLaunchFocus() {
 
   m_pendingLaunchFocus.reset();
   m_platform->activateToplevelInfo(*window);
+}
+
+void Dock::launchNewItem(shell::dock::DockInstance& instance, const shell::dock::DockItemAction& action) {
+  assertDockInitialized(m_platform, m_config, m_renderContext);
+
+  m_platform->prepareAppLaunchOnOutput(instance.output);
+  const auto options = dockLaunchOptions(*m_platform, *m_config, action.entry);
+  // Prefer the entry's own "new window" action: for D-Bus activatable apps a plain launch only raises
+  // the window that is already open.
+  for (const auto& desktopAction : action.entry.actions) {
+    if (desktopAction.id == "new-window" || desktopAction.id == "new_window") {
+      (void)desktop_entry_launch::launchAction(
+          desktopAction, action.entry.id, action.entry.workingDir, action.entry.terminal, options
+      );
+      return;
+    }
+  }
+  (void)desktop_entry_launch::launchEntry(action.entry, options);
 }
 
 void Dock::activateOrLaunchItem(shell::dock::DockInstance& instance, const shell::dock::DockItemAction& action) {
