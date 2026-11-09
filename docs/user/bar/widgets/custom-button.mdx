@@ -17,6 +17,8 @@ Shows a custom glyph/image and an optional label. What it does on click and scro
 | `peek`                  | bool   | `false`    | Show only the glyph or image and reveal the label on hover. See [Peek](/noctalia/bar/widgets/#peek) |
 | `peek_delay_ms`         | int    | `100`      | Hover time before the label reveals, from `0` to `2000` ms                                          |
 | `tooltip`               | string | `""`       | Optional hover tooltip                                                                              |
+| `label_command`         | string | `""`      | Shell command run every `label_interval` seconds; its first output line becomes the label (empty output hides the label) |
+| `label_interval`        | number | `30`      | Seconds between runs of `label_command` (2 to 3600)                                 |
 
 ```toml
 [widget.quick-action]

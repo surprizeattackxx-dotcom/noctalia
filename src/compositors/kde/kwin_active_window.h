@@ -35,18 +35,25 @@ namespace compositors::kde {
     void stop();
     void setChangeCallback(ChangeCallback callback);
 
-    std::optional<ActiveToplevel> current() const;
-    std::vector<std::string> runningAppIds() const;
-    std::vector<ToplevelInfo> windowsForApp(const std::string& idLower, const std::string& wmClassLower) const;
-    std::vector<WorkspaceWindow> trackedWorkspaceWindows() const;
-    std::optional<std::string> focusedOutputName() const;
+    [[nodiscard]] std::optional<ActiveToplevel> current() const;
+    // `outputName` (KWin connector name, e.g. "DP-1"), when non-empty, keeps only windows on that output.
+    // Windows whose output is unknown are kept so a running app never disappears from every bar.
+    [[nodiscard]] std::vector<std::string> runningAppIds(std::string_view outputName = {}) const;
+    [[nodiscard]] std::vector<ToplevelInfo>
+    windowsForApp(const std::string& idLower, const std::string& wmClassLower, std::string_view outputName = {}) const;
+    [[nodiscard]] std::vector<WorkspaceWindow> trackedWorkspaceWindows() const;
+    [[nodiscard]] std::optional<std::string> focusedOutputName() const;
     void activateWindow(
         const std::string& title, const std::string& appId, const std::string& uuid = {}, bool warpPointer = false
     );
     void closeWindow(const std::string& title, const std::string& appId, const std::string& uuid = {});
     std::optional<WindowMinimizeState> windowMinimizeState(std::string_view uuid) const;
     bool minimizeWindow(const std::string& uuid);
-    bool isAvailable() const noexcept { return m_scriptInstalled; }
+    // Moves one window (by KWin internalId) to virtual desktop `desktopIndex` (1-based) or to an output by connector
+    // name.
+    void moveWindowToDesktop(const std::string& uuid, int desktopIndex);
+    void moveWindowToOutput(const std::string& uuid, const std::string& outputName);
+    [[nodiscard]] bool isAvailable() const noexcept { return m_scriptInstalled; }
 
   private:
     struct TrackedWindow {

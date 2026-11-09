@@ -342,6 +342,37 @@ bool IwdService::activateAccessPoint(const AccessPointInfo& ap, const std::strin
   return activateAccessPoint(ap);
 }
 
+bool IwdService::connectHiddenNetwork(const std::string& ssid, HiddenNetworkSecurity security, const std::string& psk) {
+  if (ssid.empty() || m_deviceNames.empty()) {
+    return false;
+  }
+  if (security != HiddenNetworkSecurity::Open) {
+    if (m_secretAgent == nullptr || psk.empty()) {
+      return false;
+    }
+    m_pendingPsk = psk; // handed to iwd when it asks the agent for the passphrase
+  }
+  try {
+    m_connectProxy =
+        sdbus::createProxy(m_bus.connection(), kIwdBusName, sdbus::ObjectPath{m_deviceNames.begin()->first});
+    m_connectProxy->callMethodAsync("ConnectHiddenNetwork")
+        .onInterface(kStationInterface)
+        .withArguments(ssid)
+        .uponReplyInvoke([this, ssid](std::optional<sdbus::Error> error) {
+          m_pendingPsk.clear();
+          if (error) {
+            kLog.warn("ConnectHiddenNetwork failed for {}: {}", ssid, error->what());
+          }
+          refresh();
+        });
+    return true;
+  } catch (const sdbus::Error& e) {
+    m_pendingPsk.clear();
+    kLog.warn("ConnectHiddenNetwork dispatch failed for {}: {}", ssid, e.what());
+    return false;
+  }
+}
+
 void IwdService::setWirelessEnabled(bool enabled, WirelessEnabledCompletion onComplete) {
   const bool softBlocked = !enabled;
   bool rfkillDone = false;

@@ -24,6 +24,7 @@ namespace shell::dock {
     bool running = false;
     bool active = false;
     std::size_t instanceCount = 0;
+    std::int64_t unreadCount = 0; // Unity launcher API badge count published by the app, 0 when none
     std::size_t minimizedCount = 0;
     bool allMinimized = false;
   };

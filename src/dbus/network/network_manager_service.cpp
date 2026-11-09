@@ -629,9 +629,44 @@ bool NetworkManagerService::addAndActivateAccessPoint(
       }
     }
   }
-  const sdbus::ObjectPath devicePath{ap.devicePath};
-  const sdbus::ObjectPath apPath{ap.path};
-  const std::string ssid = ap.ssid;
+  return submitNewConnection(settings, ap.devicePath, ap.path, ap.ssid);
+}
+
+bool NetworkManagerService::connectHiddenNetwork(
+    const std::string& ssid, HiddenNetworkSecurity security, const std::string& psk
+) {
+  if (!available() || ssid.empty() || ssid.size() > 32) {
+    return false;
+  }
+  if (security != HiddenNetworkSecurity::Open && psk.size() < 8) {
+    return false; // WPA passphrases are 8..63 characters
+  }
+  if (m_wifiDevices.empty()) {
+    kLog.warn("hidden network {}: no Wi-Fi device", ssid);
+    return false;
+  }
+  ConnectionSettings settings;
+  settings["connection"]["type"] = sdbus::Variant{std::string("802-11-wireless")};
+  settings["connection"]["id"] = sdbus::Variant{ssid};
+  settings["connection"]["autoconnect"] = sdbus::Variant{true};
+  settings["802-11-wireless"]["ssid"] = sdbus::Variant{std::vector<std::uint8_t>(ssid.begin(), ssid.end())};
+  settings["802-11-wireless"]["mode"] = sdbus::Variant{std::string("infrastructure")};
+  settings["802-11-wireless"]["hidden"] = sdbus::Variant{true};
+  if (security != HiddenNetworkSecurity::Open) {
+    settings["802-11-wireless-security"]["key-mgmt"] =
+        sdbus::Variant{std::string(security == HiddenNetworkSecurity::Wpa3Personal ? "sae" : "wpa-psk")};
+    settings["802-11-wireless-security"]["psk"] = sdbus::Variant{psk};
+  }
+  // A hidden network has no access point object to point at; "/" lets NM scan for it.
+  return submitNewConnection(settings, m_wifiDevices.begin()->first, "/", ssid);
+}
+
+bool NetworkManagerService::submitNewConnection(
+    const std::map<std::string, std::map<std::string, sdbus::Variant>>& settings, const std::string& devicePathStr,
+    const std::string& apPathStr, const std::string& ssid
+) {
+  const sdbus::ObjectPath devicePath{devicePathStr};
+  const sdbus::ObjectPath apPath{apPathStr};
   const std::weak_ptr<int> lifetimeToken = m_lifetimeToken;
 
   auto onActivated = [this, ssid, devicePath](const std::string& connectionPath, const std::string& activePath) {

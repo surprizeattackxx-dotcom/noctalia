@@ -43,6 +43,7 @@ struct AudioNode {
   float volume = 1.0F;
   bool muted = false;
   std::uint32_t channelCount = 0;
+  std::uint32_t deviceId = 0; // PipeWire device (sound card) object id behind a sink/source, 0 when unknown
   bool isDefault = false;
   bool available = true; // false for a device whose active route is unavailable (e.g. unplugged HDMI)
 

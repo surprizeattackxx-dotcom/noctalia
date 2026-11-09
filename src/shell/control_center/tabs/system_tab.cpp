@@ -829,7 +829,7 @@ void SystemTab::syncLabels() {
   }
   if (m_cpuTempLabel != nullptr) {
     if (stats.cpuTempC.has_value()) {
-      m_cpuTempLabel->setText(std::format("{:.0F}°C", *stats.cpuTempC));
+      m_cpuTempLabel->setText(FormatUnits::formatTemperatureFromCelsius(*stats.cpuTempC));
     } else {
       m_cpuTempLabel->setText("--");
     }
@@ -838,7 +838,7 @@ void SystemTab::syncLabels() {
     const bool hasTempData = stats.gpuTempC.has_value();
     m_gpuTempGroup->setVisible(hasTempData);
     if (hasTempData && m_gpuTempLabel != nullptr) {
-      m_gpuTempLabel->setText(std::format("{:.0F}°C", *stats.gpuTempC));
+      m_gpuTempLabel->setText(FormatUnits::formatTemperatureFromCelsius(*stats.gpuTempC));
     }
   }
   if (m_gpuUsageGroup != nullptr) {

@@ -56,6 +56,26 @@ struct WeatherCurrentConditions {
   std::int32_t weatherCode = 0;
   double uvIndex = 0.0;
   std::int32_t relativeHumidityPercent = 0;
+  std::optional<double> dewPointC;
+  std::optional<double> pressureHpa; // mean sea level
+  std::optional<double> windGustKmh;
+  std::optional<double> precipitationMm;
+  std::optional<double> visibilityM;
+  std::int32_t cloudCoverPercent = -1; // -1 = unknown
+};
+
+struct WeatherAirQuality {
+  bool valid = false;
+  std::int32_t usAqi = 0;
+  double pm25 = 0.0;
+  double pm10 = 0.0;
+  double ozone = 0.0;
+};
+
+struct WeatherMoon {
+  double illumination = 0.0; // 0..1
+  double ageDays = 0.0;      // days since new moon
+  std::string name;          // New Moon, Waxing Crescent, ...
 };
 
 struct WeatherForecastDay {
@@ -65,6 +85,10 @@ struct WeatherForecastDay {
   double temperatureMinC = 0.0;
   std::string sunriseIso;
   std::string sunsetIso;
+  std::int32_t precipitationProbabilityMaxPercent = -1; // -1 = unknown
+  std::optional<double> precipitationSumMm;
+  std::optional<double> uvIndexMax;
+  std::optional<double> windGustMaxKmh;
 };
 
 struct WeatherForecastHour {
@@ -92,9 +116,18 @@ struct WeatherSnapshot {
   WeatherDailyUnits dailyUnits;
   WeatherHourlyUnits hourlyUnits;
   WeatherCurrentConditions current;
+  WeatherAirQuality airQuality;
   std::vector<WeatherForecastHour> forecastHours;
   std::vector<WeatherForecastDay> forecastDays;
   std::chrono::system_clock::time_point fetchedAt;
+};
+
+struct WeatherRainAlert {
+  std::string timeIso; // start of the hour the alert is about
+  std::int32_t hoursAhead = 0;
+  std::int32_t percent = 0;
+  std::int32_t weatherCode = 0;
+  bool snow = false;
 };
 
 struct WeatherCoordinates {
@@ -110,6 +143,8 @@ public:
 
   void initialize();
   void addChangeCallback(ChangeCallback callback);
+  using RainAlertCallback = std::function<void(const WeatherRainAlert&)>;
+  void setRainAlertCallback(RainAlertCallback callback) { m_rainAlertCallback = std::move(callback); }
 
   // Coordinates published by LocationService (IP geolocation or geocoded address) plus a
   // display name and source label. Passing std::nullopt means no location is available.
@@ -119,16 +154,30 @@ public:
   void tick();
   void requestRefresh();
 
-  bool enabled() const noexcept;
-  bool effectsEnabled() const noexcept { return m_activeConfig.effects; }
-  bool locationConfigured() const noexcept;
-  bool loading() const noexcept { return m_loading; }
-  bool hasData() const noexcept { return m_snapshot.valid; }
-  const std::string& error() const noexcept { return m_error; }
-  const WeatherSnapshot& snapshot() const noexcept { return m_snapshot; }
-  bool useImperial() const noexcept;
-  double displayTemperature(double celsius) const noexcept;
-  const char* displayTemperatureUnit() const noexcept;
+  [[nodiscard]] bool enabled() const noexcept;
+  [[nodiscard]] bool effectsEnabled() const noexcept { return m_activeConfig.effects; }
+  [[nodiscard]] bool locationConfigured() const noexcept;
+  [[nodiscard]] bool loading() const noexcept { return m_loading; }
+  [[nodiscard]] bool hasData() const noexcept { return m_snapshot.valid; }
+  [[nodiscard]] const std::string& error() const noexcept { return m_error; }
+  [[nodiscard]] const WeatherSnapshot& snapshot() const noexcept { return m_snapshot; }
+  [[nodiscard]] bool useImperial() const noexcept;
+  [[nodiscard]] double displayTemperature(double celsius) const noexcept;
+  [[nodiscard]] const char* displayTemperatureUnit() const noexcept;
+  [[nodiscard]] bool useFahrenheit() const noexcept;
+
+  // Formatted values honouring `temperature_unit` / `wind_unit` / `pressure_unit` (falling back to `unit`).
+  [[nodiscard]] std::string formatTemperature(double celsius) const;
+  [[nodiscard]] std::string formatWind(double kmh) const;
+  [[nodiscard]] std::string formatPressure(double hpa) const;
+  [[nodiscard]] std::string formatVisibility(double meters) const;
+  [[nodiscard]] std::string formatPrecipitation(double mm) const;
+
+  // Dew point comfort label ("Dry", "Comfortable", "Humid", "Muggy", "Oppressive").
+  [[nodiscard]] static std::string dewPointComfort(double dewPointC);
+  [[nodiscard]] static std::string airQualityLabel(std::int32_t usAqi);
+  [[nodiscard]] static std::string compassLabel(std::int32_t degrees);
+  [[nodiscard]] static WeatherMoon moonPhase(std::chrono::system_clock::time_point at);
 
   static std::string_view glyphForCode(std::int32_t code, bool isDay);
   static std::string shortDescriptionForCode(std::int32_t code);
@@ -144,6 +193,9 @@ private:
   void clearState();
   void notifyChanged();
   void startWeatherFetch();
+  void startAirQualityFetch();
+  void evaluateRainAlert();
+  void handleAirQualityResponse(const std::filesystem::path& path, bool success, std::uint64_t serial);
   void handleWeatherResponse(const std::filesystem::path& path, bool success, std::uint64_t serial);
   void scheduleRetryAfterFailure();
   void loadCache();
@@ -171,4 +223,7 @@ private:
   double m_resolvedLongitude = 0.0;
   RequestKind m_requestKind = RequestKind::None;
   std::uint64_t m_requestSerial = 0;
+  std::uint64_t m_airQualitySerial = 0;
+  RainAlertCallback m_rainAlertCallback;
+  bool m_rainAlertActive = false; // an alert already fired for the current spell
 };

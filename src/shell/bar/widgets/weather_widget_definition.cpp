@@ -33,6 +33,9 @@ const noctalia::bar::WidgetDefinition<WeatherWidget::Options>& weatherWidgetDefi
           glyphPositionField<Options>(textShown),
           peekField<Options>(textShown),
           peekDelayField<Options>(textShown),
+          field<&Options::format>({
+              .key = "format",
+          }),
       },
   };
   return definition;
