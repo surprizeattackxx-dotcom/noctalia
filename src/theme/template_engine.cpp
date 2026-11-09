@@ -1866,7 +1866,12 @@ namespace noctalia::theme {
       };
 
       const bool hasOutputs = !effectiveOutputs.empty();
-      if (hasOutputs) {
+      // When every output is skipped (client not installed), the hooks must not run either: they would
+      // invoke a program that is not there, e.g. the native `blender` entry next to the working flatpak one.
+      const bool anyOutputActive = std::ranges::any_of(effectiveOutputs, [&entry](const std::string& outputPath) {
+        return !shouldSkipTemplateOutput(entry, outputPath);
+      });
+      if (hasOutputs && anyOutputActive) {
         runHook(entry.preHook, /*async=*/false);
       }
 
@@ -1901,7 +1906,8 @@ namespace noctalia::theme {
         return ok;
       }
 
-      if ((hasOutputs && outputsOk) || (!hasOutputs && (!entry.postHook.empty() || !entry.postAction.empty()))) {
+      if ((hasOutputs && anyOutputActive && outputsOk)
+          || (!hasOutputs && (!entry.postHook.empty() || !entry.postAction.empty()))) {
         if (!runPostAction()) {
           ok = false;
         }
