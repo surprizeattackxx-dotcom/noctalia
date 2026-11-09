@@ -1032,11 +1032,15 @@
       "network-connect-failed-title": "Could not connect to {ssid}",
       "polkit-agent": "Polkit Agent",
       "polkit-no-session": "Polkit agent needs logind, elogind, or XDG_SESSION_ID. On seatd-only setups it cannot register for graphical prompts. Use terminal pkexec for greeter sync, or install elogind for in-session authentication.",
+      "rain-soon-body": "{percent}% chance around {time} (in about {hours} h)",
+      "rain-soon-title": "Rain expected soon",
       "screen-time-reset": "Screen Time",
       "screen-time-reset-success": "Usage history cleared.",
       "session-bus-unavailable": "Session bus unavailable",
+      "snow-soon-title": "Snow expected soon",
       "wallpaper-palette-export": "Custom Palette",
-      "wallpaper-palette-export-success": "Saved \"{name}\" and switched palette source to custom."
+      "wallpaper-palette-export-success": "Saved \"{name}\" and switched palette source to custom.",
+      "weather": "Weather"
     }
   },
   "osd": {
@@ -2002,6 +2006,10 @@
           "description": "Choose a palette from ~/.config/noctalia/palettes/",
           "label": "Custom Palette",
           "search-placeholder": "Search custom palettes…"
+        },
+        "cycle-includes-auto": {
+          "label": "Dark mode shortcut includes Auto",
+          "description": "When off, the dark mode shortcut cycles dark and light only"
         },
         "export-wallpaper-palette": {
           "button": "Save as Custom Palette",
@@ -3345,6 +3353,18 @@
         "weather-pressure-unit": {
           "description": "Air pressure unit; follows Units unless set",
           "label": "Pressure"
+        },
+        "weather-rain-alert": {
+          "label": "Rain alert",
+          "description": "Notify when rain or snow becomes likely within the next few hours"
+        },
+        "weather-rain-alert-hours": {
+          "label": "Rain alert window",
+          "description": "How many hours ahead to look"
+        },
+        "weather-rain-alert-percent": {
+          "label": "Rain alert chance",
+          "description": "Minimum chance of rain or snow, in percent, that triggers the alert"
         },
         "weather-refresh-interval": {
           "description": "How often to refresh weather data (minutes)",

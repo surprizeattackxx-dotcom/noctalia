@@ -9,8 +9,10 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
+class IpcService;
 class WaylandConnection;
 struct ext_idle_notification_v1;
 
@@ -45,6 +47,13 @@ public:
   void setScreenSaverInhibitLocks(std::int64_t locks);
   /// Apply locked timeouts without resuming completed actions or resetting unchanged timers.
   void setSessionLocked(bool locked);
+  /// Runtime on/off for one behavior by name, layered over the config (reset by restart or `reset`). Returns
+  /// false when no behavior has that name.
+  bool setBehaviorEnabled(const std::string& name, bool enabled);
+  void clearBehaviorOverrides();
+  /// One line per behavior: name, on/off, timeout and action.
+  [[nodiscard]] std::string describeBehaviors() const;
+  void registerIpc(IpcService& ipc);
   /// Activity the compositor cannot see (game controllers): postpones idle actions whose timeout has not
   /// elapsed since this call, even though the compositor already reports idle.
   void noteExternalActivity();
@@ -103,6 +112,8 @@ private:
   GraceEndCallback m_onGraceEnd;
   std::function<void()> m_onLiveIdleChange;
   IdleConfig m_idleConfig;
+  IdleConfig m_baseIdleConfig; // config as written, before runtime overrides
+  std::unordered_map<std::string, bool> m_behaviorOverrides;
   Timer m_graceFallbackTimer;
   Timer m_inhibitReleaseTimer;
   std::chrono::steady_clock::time_point m_lastExternalActivity{};

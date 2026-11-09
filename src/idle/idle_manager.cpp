@@ -1,14 +1,18 @@
 #include "idle/idle_manager.h"
 
+#include "cli/schema_msg.h"
 #include "config/config_types.h"
 #include "core/deferred_call.h"
 #include "core/log.h"
 #include "ext-idle-notify-v1-client-protocol.h"
+#include "ipc/ipc_arg_parse.h"
+#include "ipc/ipc_service.h"
 #include "wayland/wayland_connection.h"
 
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <format>
 #include <limits>
 #include <utility>
 
@@ -164,7 +168,13 @@ std::uint32_t IdleManager::effectiveTimeoutMilliseconds(const IdleBehaviorConfig
 
 void IdleManager::reload(const IdleConfig& config) {
   clearBehaviors();
+  m_baseIdleConfig = config;
   m_idleConfig = config;
+  for (auto& behavior : m_idleConfig.behaviors) {
+    if (const auto it = m_behaviorOverrides.find(behavior.name); it != m_behaviorOverrides.end()) {
+      behavior.enabled = it->second;
+    }
+  }
 
   if (m_wayland == nullptr) {
     destroyHeartbeat();
@@ -500,6 +510,75 @@ void IdleManager::handleIdled(void* data, ext_idle_notification_v1* /*notificati
   behavior->phase = BehaviorPhase::Idled;
   kLog.info("idle behavior '{}' triggered", behavior->config.name);
   self.runBehavior(*behavior);
+}
+
+bool IdleManager::setBehaviorEnabled(const std::string& name, bool enabled) {
+  const bool known = std::ranges::any_of(m_baseIdleConfig.behaviors, [&name](const IdleBehaviorConfig& behavior) {
+    return behavior.name == name;
+  });
+  if (!known) {
+    return false;
+  }
+  m_behaviorOverrides[name] = enabled;
+  reload(m_baseIdleConfig);
+  return true;
+}
+
+void IdleManager::clearBehaviorOverrides() {
+  if (m_behaviorOverrides.empty()) {
+    return;
+  }
+  m_behaviorOverrides.clear();
+  reload(m_baseIdleConfig);
+}
+
+std::string IdleManager::describeBehaviors() const {
+  std::string out;
+  for (const auto& behavior : m_idleConfig.behaviors) {
+    const bool on = behavior.enabled && behavior.timeoutSeconds > 0.0;
+    out += std::format(
+        "{}: {} ({}s, {}){}\n", behavior.name, on ? "on" : "off", static_cast<int>(behavior.timeoutSeconds),
+        behavior.action.empty() ? "command" : behavior.action,
+        m_behaviorOverrides.contains(behavior.name) ? " [override]" : ""
+    );
+  }
+  return out.empty() ? "no idle behaviors\n" : out;
+}
+
+void IdleManager::registerIpc(IpcService& ipc) {
+  ipc.bind(noctalia::cli::msg::idleBehavior, [this](const std::string& args) -> std::string {
+    const auto parts = noctalia::ipc::splitWords(args);
+    if (parts.empty() || parts[0] == "list" || parts[0] == "status") {
+      return describeBehaviors();
+    }
+    if (parts[0] == "reset") {
+      clearBehaviorOverrides();
+      return "ok\n";
+    }
+    const std::string& name = parts[0];
+    const std::string state = parts.size() > 1 ? parts[1] : std::string("status");
+    const auto current = std::ranges::find_if(m_idleConfig.behaviors, [&name](const IdleBehaviorConfig& behavior) {
+      return behavior.name == name;
+    });
+    if (current == m_idleConfig.behaviors.end()) {
+      return "error: unknown idle behavior \"" + name + "\"\n";
+    }
+    if (state == "status") {
+      return std::string(current->enabled ? "on\n" : "off\n");
+    }
+    bool next = false;
+    if (state == "on" || state == "enable") {
+      next = true;
+    } else if (state == "off" || state == "disable") {
+      next = false;
+    } else if (state == "toggle") {
+      next = !current->enabled;
+    } else {
+      return "error: expected on, off, toggle or status\n";
+    }
+    (void)setBehaviorEnabled(name, next);
+    return "ok\n";
+  });
 }
 
 void IdleManager::noteExternalActivity() { m_lastExternalActivity = std::chrono::steady_clock::now(); }

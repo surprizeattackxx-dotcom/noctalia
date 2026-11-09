@@ -15,9 +15,14 @@ temperature_unit = ""           # "" follows unit | c | f
 wind_unit        = ""           # "" follows unit | kmh | mph | ms | kn
 pressure_unit    = ""           # "" follows unit | hpa | inhg | mmhg | kpa
 air_quality      = true         # fetch the US air quality index
+rain_alert         = false      # notify when rain or snow turns likely within the next few hours
+rain_alert_percent = 60         # minimum chance (10-100) that counts as likely
+rain_alert_hours   = 3          # how many hours ahead to look (1-12)
 ```
 
 `unit` picks a metric or imperial default for everything. `temperature_unit`, `wind_unit` and `pressure_unit` override one quantity, so Celsius with mph (the UK mix) is `unit = "metric"` with `wind_unit = "mph"`. Visibility, rain amount and elevation follow `unit`.
+
+`rain_alert` posts one notification per spell when the hourly chance of precipitation reaches `rain_alert_percent` within the next `rain_alert_hours` hours while the current hour is still below it, for example "Rain expected soon: 70% chance around 3:00 PM (in about 2 h)". It arms again once the spell has passed. The check runs after each weather refresh, so the alert can lag by up to `refresh_minutes`.
 
 Besides temperature, wind and UV, the Weather tab shows dew point (with a comfort label: Dry, Comfortable, Humid, Muggy, Oppressive), humidity, sea-level pressure, today's rain chance and amount, air quality (US AQI), daylight length, cloud cover, visibility, moon phase and wind gusts. The details list scrolls. `air_quality` makes a second request to Open-Meteo's air quality endpoint with the same coordinates; turn it off to skip it. The bar [`weather` widget](/noctalia/bar/widgets/weather/) can show any of these through its `format` option.
 

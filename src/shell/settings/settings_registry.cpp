@@ -573,6 +573,11 @@ namespace settings {
         tr("settings.schema.appearance.sync-color-scheme.description"), {"theme", "sync_color_scheme"},
         ToggleSetting{cfg.theme.syncColorScheme}, "gnome gtk portal dark light prefer color scheme apps"
     ));
+    entries.push_back(makeEntry(
+        SettingsSection::Appearance, "theme", tr("settings.schema.appearance.cycle-includes-auto.label"),
+        tr("settings.schema.appearance.cycle-includes-auto.description"), {"theme", "cycle_includes_auto"},
+        ToggleSetting{cfg.theme.cycleIncludesAuto}, "dark mode shortcut cycle auto light"
+    ));
     {
       SettingControl fontFamilyControl =
           TextSetting{.value = cfg.shell.fontFamily, .placeholder = "sans-serif", .browseFileExtensions = {}};
@@ -2996,6 +3001,39 @@ namespace settings {
           ToggleSetting{cfg.weather.airQuality}, "air quality aqi pollution"
       );
       e.visibleWhen = weatherOn;
+      entries.push_back(std::move(e));
+    }
+    {
+      auto e = makeEntry(
+          SettingsSection::Location, "weather", tr("settings.schema.services.weather-rain-alert.label"),
+          tr("settings.schema.services.weather-rain-alert.description"), {"weather", "rain_alert"},
+          ToggleSetting{cfg.weather.rainAlert}, "rain snow precipitation notification alert umbrella"
+      );
+      e.visibleWhen = weatherOn;
+      entries.push_back(std::move(e));
+    }
+    {
+      auto e = makeEntry(
+          SettingsSection::Location, "weather", tr("settings.schema.services.weather-rain-alert-percent.label"),
+          tr("settings.schema.services.weather-rain-alert-percent.description"), {"weather", "rain_alert_percent"},
+          StepperSetting{
+              .value = cfg.weather.rainAlertPercent, .minValue = 10, .maxValue = 100, .step = 5, .valueSuffix = "%"
+          },
+          "rain alert chance percent"
+      );
+      e.visibleWhen = [](const Config& c) { return c.weather.enabled && c.weather.rainAlert; };
+      entries.push_back(std::move(e));
+    }
+    {
+      auto e = makeEntry(
+          SettingsSection::Location, "weather", tr("settings.schema.services.weather-rain-alert-hours.label"),
+          tr("settings.schema.services.weather-rain-alert-hours.description"), {"weather", "rain_alert_hours"},
+          StepperSetting{
+              .value = cfg.weather.rainAlertHours, .minValue = 1, .maxValue = 12, .step = 1, .valueSuffix = "h"
+          },
+          "rain alert hours window"
+      );
+      e.visibleWhen = [](const Config& c) { return c.weather.enabled && c.weather.rainAlert; };
       entries.push_back(std::move(e));
     }
     {

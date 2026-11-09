@@ -1423,6 +1423,11 @@ struct WeatherConfig {
   std::string pressureUnit;
   /// Fetch the air quality index (separate Open-Meteo endpoint, same coordinates).
   bool airQuality = true;
+  /// Notify when rain or snow is likely soon: the first upcoming hour within `rainAlertHours` whose chance is at
+  /// least `rainAlertPercent` (and the current hour is below it). One alert per spell.
+  bool rainAlert = false;
+  std::int32_t rainAlertPercent = 60;
+  std::int32_t rainAlertHours = 3;
 
   bool operator==(const WeatherConfig&) const = default;
 };
@@ -1894,6 +1899,8 @@ struct ThemeConfig {
   ShellThemeMode shellMode = ShellThemeMode::Follow;
   bool pureBlackDark = false;
   bool syncColorScheme = true;
+  /// Include "auto" when the dark mode shortcut cycles; false cycles dark and light only.
+  bool cycleIncludesAuto = true;
   TemplatesConfig templates;
 
   bool operator==(const ThemeConfig&) const = default;

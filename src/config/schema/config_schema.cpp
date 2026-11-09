@@ -59,6 +59,9 @@ namespace noctalia::config::schema {
         field(&WeatherConfig::windUnit, "wind_unit"),
         field(&WeatherConfig::pressureUnit, "pressure_unit"),
         field(&WeatherConfig::airQuality, "air_quality"),
+        field(&WeatherConfig::rainAlert, "rain_alert"),
+        field(&WeatherConfig::rainAlertPercent, "rain_alert_percent", Range<std::int64_t>{10, 100, 5}),
+        field(&WeatherConfig::rainAlertHours, "rain_alert_hours", Range<std::int64_t>{1, 12, 1}),
     };
     return s;
   }
@@ -1403,6 +1406,7 @@ namespace noctalia::config::schema {
         field(&ThemeConfig::customPalette, "custom_palette"),
         field(&ThemeConfig::wallpaperScheme, "wallpaper_scheme"),
         enumField(&ThemeConfig::mode, "mode", kThemeModes),
+        field(&ThemeConfig::cycleIncludesAuto, "cycle_includes_auto"),
         enumField(&ThemeConfig::shellMode, "shell_mode", kShellThemeModes),
         field(&ThemeConfig::pureBlackDark, "pure_black_dark"),
         field(&ThemeConfig::syncColorScheme, "sync_color_scheme"),

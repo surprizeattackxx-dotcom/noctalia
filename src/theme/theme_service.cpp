@@ -350,7 +350,7 @@ namespace noctalia::theme {
       next = ThemeMode::Light;
       break;
     case ThemeMode::Light:
-      next = ThemeMode::Auto;
+      next = m_config.config().theme.cycleIncludesAuto ? ThemeMode::Auto : ThemeMode::Dark;
       break;
     case ThemeMode::Auto:
       next = ThemeMode::Dark;

@@ -122,6 +122,14 @@ struct WeatherSnapshot {
   std::chrono::system_clock::time_point fetchedAt;
 };
 
+struct WeatherRainAlert {
+  std::string timeIso; // start of the hour the alert is about
+  std::int32_t hoursAhead = 0;
+  std::int32_t percent = 0;
+  std::int32_t weatherCode = 0;
+  bool snow = false;
+};
+
 struct WeatherCoordinates {
   double latitude = 0.0;
   double longitude = 0.0;
@@ -135,6 +143,8 @@ public:
 
   void initialize();
   void addChangeCallback(ChangeCallback callback);
+  using RainAlertCallback = std::function<void(const WeatherRainAlert&)>;
+  void setRainAlertCallback(RainAlertCallback callback) { m_rainAlertCallback = std::move(callback); }
 
   // Coordinates published by LocationService (IP geolocation or geocoded address) plus a
   // display name and source label. Passing std::nullopt means no location is available.
@@ -184,6 +194,7 @@ private:
   void notifyChanged();
   void startWeatherFetch();
   void startAirQualityFetch();
+  void evaluateRainAlert();
   void handleAirQualityResponse(const std::filesystem::path& path, bool success, std::uint64_t serial);
   void handleWeatherResponse(const std::filesystem::path& path, bool success, std::uint64_t serial);
   void scheduleRetryAfterFailure();
@@ -213,4 +224,6 @@ private:
   RequestKind m_requestKind = RequestKind::None;
   std::uint64_t m_requestSerial = 0;
   std::uint64_t m_airQualitySerial = 0;
+  RainAlertCallback m_rainAlertCallback;
+  bool m_rainAlertActive = false; // an alert already fired for the current spell
 };

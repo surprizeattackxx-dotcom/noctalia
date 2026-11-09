@@ -825,12 +825,58 @@ void WeatherService::handleWeatherResponse(const std::filesystem::path& path, bo
     m_nextRefreshAt = Clock::now() + std::chrono::minutes(std::max(5, m_activeConfig.refreshMinutes));
     saveCache();
     notifyChanged();
+    evaluateRainAlert();
     startAirQualityFetch();
   } catch (const std::exception& e) {
     m_error = i18n::tr("weather.errors.parse-weather");
     scheduleRetryAfterFailure();
     kLog.warn("{}: {}", m_error, e.what());
     notifyChanged();
+  }
+}
+
+void WeatherService::evaluateRainAlert() {
+  if (!m_activeConfig.rainAlert || !m_snapshot.valid || m_snapshot.forecastHours.empty()) {
+    m_rainAlertActive = false;
+    return;
+  }
+  const std::int32_t threshold = m_activeConfig.rainAlertPercent;
+  const std::size_t window = static_cast<std::size_t>(std::max(1, m_activeConfig.rainAlertHours));
+  const auto& hours = m_snapshot.forecastHours;
+  // forecastHours[0] is the current hour (past hours were dropped); a spell already under way is not "soon".
+  const bool raining = hours.front().precipitationProbabilityPercent >= threshold;
+  const std::size_t last = std::min(window, hours.size() - 1);
+  std::size_t hit = 0;
+  for (std::size_t i = 1; i <= last; ++i) {
+    if (hours[i].precipitationProbabilityPercent >= threshold) {
+      hit = i;
+      break;
+    }
+  }
+  if (hit == 0 || raining) {
+    // Nothing coming, or it is already underway: arm again once it has cleared.
+    if (hit == 0 && !raining) {
+      m_rainAlertActive = false;
+    }
+    return;
+  }
+  if (m_rainAlertActive) {
+    return;
+  }
+  m_rainAlertActive = true;
+  const auto& hour = hours[hit];
+  kLog.info("rain alert: {}% chance at {} (in {} h)", hour.precipitationProbabilityPercent, hour.timeIso, hit);
+  const std::int32_t code = hour.weatherCode;
+  if (m_rainAlertCallback) {
+    m_rainAlertCallback(
+        WeatherRainAlert{
+            .timeIso = hour.timeIso,
+            .hoursAhead = static_cast<std::int32_t>(hit),
+            .percent = hour.precipitationProbabilityPercent,
+            .weatherCode = code,
+            .snow = (code >= 71 && code <= 77) || code == 85 || code == 86,
+        }
+    );
   }
 }
 

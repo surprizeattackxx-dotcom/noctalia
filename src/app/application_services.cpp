@@ -74,6 +74,7 @@
 #include "system/easyeffects_service.h"
 #include "system/keyboard_backlight_service.h"
 #include "system/system_monitor_service.h"
+#include "time/time_format.h"
 #include "ui/app_icon_colorization.h"
 #include "ui/controls/input.h"
 #include "ui/style.h"
@@ -1737,6 +1738,18 @@ void Application::initSessionBusServices() {
     if (shouldRefreshControlCenter()) {
       m_panelManager.refresh();
     }
+  });
+  m_weatherService.setRainAlertCallback([this](const WeatherRainAlert& alert) {
+    const auto& fmt = m_configService.config().shell.timeFormat;
+    const std::string when = formatIsoTime(alert.timeIso, fmt.c_str());
+    m_notificationManager.addInternal(
+        i18n::tr("notifications.internal.weather"),
+        i18n::tr(alert.snow ? "notifications.internal.snow-soon-title" : "notifications.internal.rain-soon-title"),
+        i18n::tr(
+            "notifications.internal.rain-soon-body", "time", when, "percent", alert.percent, "hours", alert.hoursAhead
+        ),
+        Urgency::Normal, kDefaultNotificationTimeout * 2, std::string("noctalia-glyph:weather-cloud-rain")
+    );
   });
   m_weatherService.addChangeCallback([this, shouldRefreshControlCenter] {
     m_bar.refresh();

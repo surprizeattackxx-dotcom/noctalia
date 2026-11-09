@@ -702,6 +702,7 @@ void Application::initIpc() {
   m_panelManager.registerIpc(m_ipcService);
   m_idleInhibitor.registerIpc(m_ipcService);
   m_gameMode.registerIpc(m_ipcService);
+  m_idleManager.registerIpc(m_ipcService);
   m_gammaService.registerIpc(m_ipcService);
   m_themeService.registerIpc(m_ipcService);
   m_templateApplyService.registerIpc(m_ipcService);
