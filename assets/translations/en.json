@@ -1025,6 +1025,18 @@
       "greeter-sync-timeout": "Greeter sync is still waiting for authorization. Check a TTY or console for a polkit prompt, enable the polkit agent in Security settings, or run pkexec manually.",
       "greeter-sync-timeout-manual": "Authenticated legacy sync still needs administrator approval. Run the positional apply helper in a terminal and preserve NOCTALIA_GREETER_STATE_DIR if you use a custom path.",
       "greeter-sync-timeout-manual-pkexec": "Greeter sync still needs authorization. Run in a terminal: pkexec noctalia-greeter-apply-appearance --sync \"/run/user/$(id -u)/noctalia-greeter-sync\"",
+      "kde-job-cancel": "Cancel",
+      "kde-job-default-title": "File transfer",
+      "kde-job-eta-hours": "{h} hr {m} min left",
+      "kde-job-eta-minutes": "{n} min left",
+      "kde-job-eta-seconds": "{n} sec left",
+      "kde-job-failed-title": "{title} failed",
+      "kde-job-files": "{done} of {total} files",
+      "kde-job-finished-title": "{title} finished",
+      "kde-job-open-folder": "Open folder",
+      "kde-job-pause": "Pause",
+      "kde-job-paused": "Paused",
+      "kde-job-resume": "Resume",
       "keybind-app": "Noctalia",
       "keybind-invalid-modifier": "This shortcut accepts a single key without modifiers.",
       "keybind-invalid-printable": "Printable keys (letters, numbers, symbols) require a modifier such as Ctrl or Alt.",
@@ -2849,6 +2861,18 @@
         "position": {
           "description": "Screen position for notification toasts",
           "label": "Screen Position"
+        },
+        "quiet-hours": {
+          "description": "Turn Do Not Disturb on and off automatically at set times every day",
+          "label": "Quiet Hours"
+        },
+        "quiet-hours-end": {
+          "description": "When Do Not Disturb turns back off, as HH:MM in 24-hour time (07:00 is 7 AM)",
+          "label": "Quiet Hours End"
+        },
+        "quiet-hours-start": {
+          "description": "When Do Not Disturb turns on, as HH:MM in 24-hour time (22:00 is 10 PM)",
+          "label": "Quiet Hours Start"
         },
         "scale": {
           "description": "Scale notification toasts relative to the shell UI scale",
@@ -5425,6 +5449,7 @@
         "clock": "Clock",
         "control-center": "Control Center",
         "custom-button": "Custom Button",
+        "job-progress": "File Operation Progress",
         "keyboard-layout": "Keyboard Layout",
         "launcher": "Launcher",
         "lock-keys": "Lock Keys",
