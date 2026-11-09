@@ -391,6 +391,7 @@ std::unique_ptr<Flex> HomeTab::create() {
   });
 
   auto leftColumn = ui::column({
+      .out = &m_leftColumn,
       .align = FlexAlign::Stretch,
       .justify = FlexJustify::Start,
       .gap = Style::spaceMd * scale,
@@ -682,6 +683,7 @@ std::unique_ptr<Flex> HomeTab::create() {
   }
   tab->addChild(std::move(bottomRow));
 
+  syncCardVisibility();
   return tab;
 }
 
@@ -902,14 +904,19 @@ void HomeTab::doLayout(Renderer& renderer, float contentWidth, float bodyHeight)
         + m_shortcutsGrid->paddingTop()
         + m_shortcutsGrid->paddingBottom()
     );
+    // With the user card hidden there is nothing above the row, so it takes the whole body height.
+    const bool userCardShown = m_userCard == nullptr || m_userCard->visible();
+    const float rowH = userCardShown ? gridH : std::max(gridH, std::round(bodyHeight));
     if (m_bottomRow != nullptr) {
-      m_bottomRow->setMinHeight(gridH);
+      m_bottomRow->setMinHeight(rowH);
     }
 
     // Integer card heights track the snapped row height so top/bottom borders land on pixels.
-    if (m_mediaCard != nullptr && m_dateTimeCard != nullptr) {
+    const bool mediaShown = m_mediaCard != nullptr && m_mediaCard->visible();
+    const bool dateShown = m_dateTimeCard != nullptr && m_dateTimeCard->visible();
+    if (mediaShown && dateShown) {
       const float colGap = Style::spaceMd * contentScale();
-      const float avail = std::max(0.0F, gridH - colGap);
+      const float avail = std::max(0.0F, rowH - colGap);
       const float cardGrowTotal = kHomeMediaCardFlexGrow + kHomeDateTimeCardFlexGrow;
       const float mediaH = std::round(avail * (kHomeMediaCardFlexGrow / cardGrowTotal));
       const float dateH = std::max(0.0F, avail - mediaH);
@@ -918,6 +925,10 @@ void HomeTab::doLayout(Renderer& renderer, float contentWidth, float bodyHeight)
       m_mediaCard->setMaxHeight(mediaH);
       m_dateTimeCard->setMinHeight(dateH);
       m_dateTimeCard->setMaxHeight(dateH);
+    } else if (mediaShown || dateShown) {
+      Flex* only = mediaShown ? m_mediaCard : m_dateTimeCard;
+      only->setMinHeight(rowH);
+      only->setMaxHeight(rowH);
     }
   }
 
@@ -1271,7 +1282,37 @@ void HomeTab::doUpdate(Renderer& renderer) {
   } else {
     m_progressTimer.stop();
   }
+  syncCardVisibility();
   sync(renderer);
+}
+
+void HomeTab::syncCardVisibility() {
+  const auto home =
+      m_config != nullptr ? m_config->config().controlCenter.homeTab : ControlCenterConfig::HomeTabConfig{};
+  const auto show = [](Node* node, bool visible) -> bool {
+    if (node == nullptr || node->visible() == visible) {
+      return false;
+    }
+    node->setVisible(visible);
+    node->setParticipatesInLayout(visible);
+    return true;
+  };
+  const bool mediaIdle = m_mpris == nullptr || !m_mpris->activePlayer().has_value();
+  const bool mediaShown = home.showMediaCard && !(home.hideMediaWhenIdle && mediaIdle);
+  bool changed = false;
+  changed |= show(m_userCard, home.showUserCard);
+  changed |= show(m_mediaCard, mediaShown);
+  // The shortcuts grid needs a left column beside it; with both cards off the date/time card stays.
+  const bool dateShown = home.showDateTimeCard || !mediaShown;
+  changed |= show(m_dateTimeCard, dateShown);
+  changed |= show(m_leftColumn, true);
+  changed |= show(m_userHost, home.showUserHost);
+  changed |= show(m_userUptime, home.showUptime);
+  changed |= show(m_userVersion, home.showVersion);
+  changed |= show(m_userCompositor, home.showCompositor);
+  if (changed) {
+    PanelManager::instance().requestLayout();
+  }
 }
 
 void HomeTab::setActive(bool active) {
@@ -1328,6 +1369,7 @@ void HomeTab::onClose() {
   m_rootLayout = nullptr;
   m_bottomRow = nullptr;
   m_dateTimeCard = nullptr;
+  m_leftColumn = nullptr;
   m_mediaCard = nullptr;
   m_mediaText = nullptr;
   m_userCard = nullptr;
@@ -1488,8 +1530,10 @@ void HomeTab::sync(Renderer& renderer) {
 
   const bool weatherEnabled = m_weather != nullptr && m_weather->enabled();
   if (m_weatherRow != nullptr) {
-    m_weatherRow->setVisible(weatherEnabled);
-    m_weatherRow->setParticipatesInLayout(weatherEnabled);
+    const bool showRow =
+        weatherEnabled && (m_config == nullptr || m_config->config().controlCenter.homeTab.showWeather);
+    m_weatherRow->setVisible(showRow);
+    m_weatherRow->setParticipatesInLayout(showRow);
   }
   if (weatherEnabled && m_weatherGlyph != nullptr && m_weatherLine != nullptr) {
     if (!m_weather->locationConfigured()) {

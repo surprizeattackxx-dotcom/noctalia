@@ -568,6 +568,30 @@ void IdleManager::registerIpc(IpcService& ipc) {
     if (state == "status") {
       return std::string(current->enabled ? "on\n" : "off\n");
     }
+    if (state == "trigger" || state == "resume") {
+      // Runs the behavior's action (or its resume command) right now, whether or not the behavior is enabled.
+      // Triggers skip the grace fade; they are explicit requests.
+      const auto base = std::ranges::find_if(m_baseIdleConfig.behaviors, [&name](const IdleBehaviorConfig& behavior) {
+        return behavior.name == name;
+      });
+      const IdleBehaviorConfig& config = base != m_baseIdleConfig.behaviors.end() ? *base : *current;
+      const ResolvedIdleBehavior resolved = resolveIdleBehaviorActions(config);
+      if (state == "trigger") {
+        if (resolved.idleAction.kind == IdleActionKind::None) {
+          return "error: behavior \"" + name + "\" has no action\n";
+        }
+        return runAction(config, resolved.idleAction) ? "ok\n" : "error: action failed\n";
+      }
+      bool ok = true;
+      if (resolved.resumeAction.kind != IdleActionKind::None) {
+        ok = runAction(config, resolved.resumeAction) && ok;
+      }
+      if (!resolved.resumeCommand.empty()) {
+        ok = runAction(config, IdleActionRequest{.kind = IdleActionKind::Command, .command = resolved.resumeCommand})
+            && ok;
+      }
+      return ok ? "ok\n" : "error: resume failed\n";
+    }
     bool next = false;
     if (state == "on" || state == "enable") {
       next = true;
@@ -576,7 +600,7 @@ void IdleManager::registerIpc(IpcService& ipc) {
     } else if (state == "toggle") {
       next = !current->enabled;
     } else {
-      return "error: expected on, off, toggle or status\n";
+      return "error: expected on, off, toggle, status, trigger or resume\n";
     }
     (void)setBehaviorEnabled(name, next);
     return "ok\n";
