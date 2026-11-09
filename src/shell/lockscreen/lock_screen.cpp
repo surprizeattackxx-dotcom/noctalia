@@ -333,7 +333,6 @@ bool LockScreen::lockOverlay() {
 }
 
 bool LockScreen::mirrorKdePrompt(const std::string& kind, const std::string& value) {
-  kLog.debug("kde prompt mirror: {} {} (overlay={}, locked={})", kind, value, m_overlayMode, m_locked);
   if (!m_overlayMode || !m_locked) {
     return false;
   }
