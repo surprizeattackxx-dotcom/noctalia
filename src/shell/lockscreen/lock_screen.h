@@ -60,6 +60,9 @@ public:
   /// KDE: the real locker unlocked by itself; dismiss the overlay without poking the locker again.
   /// Returns true when an overlay was active.
   bool endOverlay();
+  /// KDE overlay only: the real greeter owns the keyboard and PAM, so it reports typing state here for display.
+  /// kind: "chars" (value = count), "auth", "fail", "clear". The overlay never authenticates by itself.
+  bool mirrorKdePrompt(const std::string& kind, const std::string& value);
   [[nodiscard]] static bool kdeOverlayEnabled();
   void primeDesktopCaptures();
   void clearPrimedDesktopCaptures();

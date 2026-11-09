@@ -327,6 +327,45 @@ bool LockScreen::lockOverlay() {
   return true;
 }
 
+bool LockScreen::mirrorKdePrompt(const std::string& kind, const std::string& value) {
+  if (!m_overlayMode || !m_locked) {
+    return false;
+  }
+  if (kind == "chars") {
+    std::size_t count = 0;
+    for (const char c : value) {
+      if (c < '0' || c > '9' || count > 1000) {
+        return false;
+      }
+      count = count * 10 + static_cast<std::size_t>(c - '0');
+    }
+    m_password.assign(count, '*');
+    m_authenticating = false;
+    if (count > 0) {
+      m_status.clear();
+      m_statusIsError = false;
+    }
+  } else if (kind == "auth") {
+    m_authenticating = true;
+    m_status = i18n::tr("lockscreen.authenticating");
+    m_statusIsError = false;
+  } else if (kind == "fail") {
+    m_authenticating = false;
+    m_password.clear();
+    m_status = i18n::tr("lockscreen.authentication-failed");
+    m_statusIsError = true;
+  } else if (kind == "clear") {
+    m_authenticating = false;
+    m_password.clear();
+    m_status.clear();
+    m_statusIsError = false;
+  } else {
+    return false;
+  }
+  updatePromptOnSurfaces();
+  return true;
+}
+
 bool LockScreen::endOverlay() {
   if (!m_overlayMode || !isActive()) {
     return false;
@@ -1541,6 +1580,9 @@ void LockScreen::handlePasswordEdited(const std::string& value) {
 }
 
 void LockScreen::tryAuthenticate() {
+  if (m_overlayMode) {
+    return; // KDE's greeter authenticates; a second PAM attempt here would double-count failures
+  }
   if (m_authenticating || !m_locked || m_unlocking) {
     return;
   }
