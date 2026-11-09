@@ -166,6 +166,7 @@ namespace noctalia::config::schema {
         field(&BarConfig::autoHideDelayMs, "auto_hide_delay_ms", kBarAutoHideDelayMsRange),
         field(&BarConfig::smartAutoHide, "smart_auto_hide"),
         field(&BarConfig::showOnWorkspaceSwitch, "show_on_workspace_switch"),
+        field(&BarConfig::fallbackOutput, "fallback_output"),
         field(&BarConfig::reserveSpace, "reserve_space"),
         field(&BarConfig::autoHideReserveSpace, "auto_hide_reserve_space"),
         barLayerField(),

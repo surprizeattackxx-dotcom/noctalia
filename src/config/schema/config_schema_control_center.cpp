@@ -37,6 +37,21 @@ namespace noctalia::config::schema {
       };
       return s;
     }
+
+    const Schema<ControlCenterConfig::HomeTabConfig>& homeTabSchema() {
+      static const Schema<ControlCenterConfig::HomeTabConfig> s = {
+          field(&ControlCenterConfig::HomeTabConfig::showUserCard, "show_user_card"),
+          field(&ControlCenterConfig::HomeTabConfig::showMediaCard, "show_media_card"),
+          field(&ControlCenterConfig::HomeTabConfig::showDateTimeCard, "show_date_time_card"),
+          field(&ControlCenterConfig::HomeTabConfig::showWeather, "show_weather"),
+          field(&ControlCenterConfig::HomeTabConfig::hideMediaWhenIdle, "hide_media_when_idle"),
+          field(&ControlCenterConfig::HomeTabConfig::showUserHost, "show_user_host"),
+          field(&ControlCenterConfig::HomeTabConfig::showUptime, "show_uptime"),
+          field(&ControlCenterConfig::HomeTabConfig::showVersion, "show_version"),
+          field(&ControlCenterConfig::HomeTabConfig::showCompositor, "show_compositor"),
+      };
+      return s;
+    }
   } // namespace
 
   const Schema<ControlCenterConfig>& controlCenterSchema() {
@@ -50,6 +65,7 @@ namespace noctalia::config::schema {
         field(&ControlCenterConfig::hiddenTabs, "hidden_tabs"),
         subTable(&ControlCenterConfig::calendarTab, "calendar", calendarTabSchema()),
         subTable(&ControlCenterConfig::mediaTab, "media", mediaTabSchema()),
+        subTable(&ControlCenterConfig::homeTab, "home", homeTabSchema()),
         arrayOf<ControlCenterConfig, ShortcutConfig>(
             &ControlCenterConfig::shortcuts, "shortcuts", shortcutSchema(),
             [](const ShortcutConfig& sc) { return !sc.type.empty(); }

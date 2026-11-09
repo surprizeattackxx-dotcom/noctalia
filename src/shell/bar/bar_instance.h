@@ -59,6 +59,8 @@ struct BarInstance {
   std::int32_t outputLogicalWidth = 0;
   std::int32_t outputLogicalHeight = 0;
   std::size_t barIndex = 0;
+  // Created on a stand-in monitor because the configured ones are not connected (BarConfig::fallbackOutput).
+  bool isFallback = false;
   BarConfig barConfig;
   std::unique_ptr<LayerSurface> surface;
   // sceneRoot must be destroyed before `animations` — ~Node() calls cancelForOwner().

@@ -3893,6 +3893,15 @@ bool LauncherPanel::handleKeyEvent(std::uint32_t sym, std::uint32_t modifiers) {
     return openAppActionsMenu(m_selectedIndex, anchorX, anchorY);
   }
 
+  // Alt+1..9 activates the Nth result directly (plain digits belong to the search field).
+  if (modifiers == KeyMod::Alt && sym >= 0x31 && sym <= 0x39) {
+    const std::size_t index = static_cast<std::size_t>(sym - 0x31);
+    if (index < m_results.size()) {
+      activateAt(index);
+    }
+    return true;
+  }
+
   if (KeybindMatcher::matches(KeybindAction::Validate, sym, modifiers)) {
     activateSelected();
     return true;

@@ -2249,6 +2249,10 @@
         "ends-margin": {
           "description": "Shortens the bar from both ends along its length, in pixels or as a percentage of the screen; set to 0 for a full-width or full-height bar"
         },
+        "fallback-output": {
+          "description": "When none of the monitors this bar is enabled for are connected, show it on the first connected monitor",
+          "label": "Fall Back to Any Monitor"
+        },
         "font-family": {
           "description": "Typeface for this bar's widgets; leave empty to inherit the global font (per-widget Font Family overrides this)",
           "label": "Font Family"
@@ -4703,6 +4707,7 @@
         "rate": "Rate",
         "regular": "Regular",
         "replace": "Replace",
+        "ring": "Ring",
         "scroll-gesture": "Once per Gesture",
         "scroll-steps": "Every Step",
         "shared": "Shared",
@@ -4964,6 +4969,10 @@
           "description": "Hide inactive privacy icons and hide the widget when nothing is active",
           "label": "Hide Inactive"
         },
+        "hide-label-when-muted": {
+          "description": "Hide the percentage while muted; the mute icon already shows the state",
+          "label": "Hide Label When Muted"
+        },
         "hide-passive": {
           "description": "Hide tray items whose StatusNotifierItem status is Passive",
           "label": "Hide Passive Items"
@@ -5074,9 +5083,17 @@
           "description": "Optional static text shown on this button",
           "label": "Label"
         },
+        "label-command": {
+          "label": "Label command",
+          "description": "Shell command run every interval; its first line of output becomes the label. Leave empty for a fixed label."
+        },
         "label-content": {
           "description": "What the battery label shows: charge percentage, time remaining, or power draw",
           "label": "Label Content"
+        },
+        "label-interval": {
+          "label": "Label refresh (seconds)",
+          "description": "How often the label command runs."
         },
         "label-min-width": {
           "description": "Minimum label width in pixels to prevent resizing",
@@ -5400,14 +5417,6 @@
         "workspace-label-placement": {
           "description": "Corner, centered on the edge, or inside the pill",
           "label": "Workspace Label Placement"
-        },
-        "label-command": {
-          "label": "Label command",
-          "description": "Shell command run every interval; its first line of output becomes the label. Leave empty for a fixed label."
-        },
-        "label-interval": {
-          "label": "Label refresh (seconds)",
-          "description": "How often the label command runs."
         },
         "workspace-monitors": {
           "all": "All Monitors",
