@@ -4,6 +4,7 @@
 #include "dbus/bluetooth/bluetooth_uuid_names.h"
 #include "i18n/i18n.h"
 #include "render/core/renderer.h"
+#include "shell/control_center/confirm_click.h"
 #include "shell/panel/panel_manager.h"
 #include "ui/builders.h"
 #include "ui/controls/collapsible.h"
@@ -247,20 +248,25 @@ public:
     }
 
     if (m_device.paired) {
+      Button* forgetButton = nullptr;
       header->addChild(
           ui::button({
+              .out = &forgetButton,
               .glyph = "trash",
               .glyphSize = Style::fontSizeBody * scale,
               .variant = ButtonVariant::Ghost,
               .padding = Style::spaceXs * scale,
               .radius = Style::scaledRadiusSm(scale),
-              .onClick = [this] {
-                if (m_service != nullptr) {
-                  m_service->forget(m_device.path);
-                }
-                PanelManager::instance().refresh();
-              },
           })
+      );
+      m_forgetConfirm.bind(
+          forgetButton, "trash", ButtonVariant::Ghost, i18n::tr("control-center.bluetooth.forget"),
+          i18n::tr("control-center.bluetooth.forget-confirm"), [this] {
+            if (m_service != nullptr) {
+              m_service->forget(m_device.path);
+            }
+            PanelManager::instance().refresh();
+          }
       );
     }
 
@@ -345,6 +351,7 @@ public:
   }
 
 private:
+  ConfirmClick m_forgetConfirm;
   BluetoothDeviceInfo m_device;
   BluetoothService* m_service = nullptr;
   Spinner* m_connectingSpinner = nullptr;

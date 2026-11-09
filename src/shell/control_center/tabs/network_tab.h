@@ -68,6 +68,7 @@ private:
   void showPasswordPrompt(const AccessPointInfo& ap);
   void submitPasswordPrompt(const std::string& value);
   void cancelPasswordPrompt();
+  void showHiddenNetworkPrompt();
   void clearPasswordPrompt();
   // Reads the enterprise form back out. Password comes from the shared field.
   [[nodiscard]] network_enterprise::EnterpriseCredentials
@@ -103,6 +104,10 @@ private:
   Input* m_caCertInput = nullptr;
   Input* m_domainMatchInput = nullptr;
   Label* m_credentialError = nullptr;
+  // Hidden-network form: SSID and security shown above the shared password field.
+  Flex* m_hiddenFields = nullptr;
+  Input* m_hiddenSsidInput = nullptr;
+  Select* m_hiddenSecuritySelect = nullptr;
   ScrollView* m_listScroll = nullptr;
   Flex* m_list = nullptr;
 
@@ -123,6 +128,7 @@ private:
 
   bool m_hasPendingSecret = false;
   bool m_pendingEnterprise = false;
+  bool m_pendingHidden = false;
   bool m_focusPasswordPrompt = false;
   std::string m_pendingSsid;
   std::optional<AccessPointInfo> m_pendingAccessPoint;

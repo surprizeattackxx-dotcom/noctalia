@@ -37,6 +37,8 @@ public:
   void requestScan() override;
   bool activateAccessPoint(const AccessPointInfo& ap) override;
   bool activateAccessPoint(const AccessPointInfo& ap, const std::string& psk) override;
+  [[nodiscard]] bool supportsHiddenNetworks() const noexcept override { return true; }
+  bool connectHiddenNetwork(const std::string& ssid, HiddenNetworkSecurity security, const std::string& psk) override;
   bool activateVpnConnection(const VpnConnectionInfo& /*vpn*/) override { return false; }
   bool deactivateVpnConnection(const VpnConnectionInfo& /*vpn*/) override { return false; }
   void setWirelessEnabled(bool enabled, WirelessEnabledCompletion onComplete = {}) override;

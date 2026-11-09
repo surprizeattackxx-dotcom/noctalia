@@ -42,6 +42,14 @@ public:
   ) {
     return false;
   }
+  // Joins a network that does not broadcast its SSID. The SSID and security come from the user; `psk` is
+  // ignored for an open network. Backends without support keep the defaults and the UI hides the entry point.
+  [[nodiscard]] virtual bool supportsHiddenNetworks() const noexcept { return false; }
+  virtual bool connectHiddenNetwork(
+      const std::string& /*ssid*/, HiddenNetworkSecurity /*security*/, const std::string& /*psk*/
+  ) {
+    return false;
+  }
   virtual bool activateVpnConnection(const VpnConnectionInfo& vpn) = 0;
   virtual bool deactivateVpnConnection(const VpnConnectionInfo& vpn) = 0;
   [[nodiscard]] virtual bool canActivateWiredConnection() const noexcept { return false; }

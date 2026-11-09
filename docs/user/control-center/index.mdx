@@ -139,6 +139,10 @@ On the NetworkManager backend, a Wi-Fi connection that fails shows a notificatio
 
 ### Enterprise Wi-Fi (802.1X)
 
+The **+** button in the Wi-Fi card header joins a hidden network (one that does not broadcast its name). Enter the exact network name, pick the security (open, WPA/WPA2 Personal, or WPA3 Personal) and type the password; WPA passwords are 8 to 63 characters. NetworkManager and iwd support it; the wpa_supplicant backend does not show the button. NetworkManager saves the profile with the hidden flag after a successful connection, so it reconnects on its own.
+
+The trash button on a saved network, and on a paired Bluetooth device, asks for confirmation: the first click turns it into a red warning button, and a second click within three seconds forgets the network or device. It disarms itself if you do nothing.
+
 Clicking a WPA2/WPA3-Enterprise network opens a credential form instead of the pre-shared-key field: EAP method (PEAP or TTLS), inner authentication, identity, anonymous identity, server domain suffix, and CA certificate path. The password field below the form is the one used for the EAP login.
 
 PEAP accepts MSCHAPv2 only, so the inner dropdown is pinned and disabled while PEAP is selected; TTLS also allows PAP, MSCHAP, and CHAP. Leaving the CA certificate path empty trusts the system CA store; a path must be absolute and pins that file instead of the system store. The server domain suffix is the RADIUS server name suffix your organization publishes, and is optional.

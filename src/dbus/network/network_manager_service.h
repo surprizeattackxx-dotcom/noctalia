@@ -6,6 +6,7 @@
 #include <chrono>
 #include <cstdint>
 #include <functional>
+#include <map>
 #include <memory>
 #include <optional>
 #include <set>
@@ -18,7 +19,8 @@ class SystemBus;
 
 namespace sdbus {
   class IProxy;
-}
+  class Variant;
+} // namespace sdbus
 
 class NetworkManagerService : public INetworkService {
 public:
@@ -52,6 +54,9 @@ public:
   // Returns false only on an immediate D-Bus error.
   bool activateAccessPoint(const AccessPointInfo& ap) override;
   bool activateAccessPoint(const AccessPointInfo& ap, const std::string& psk) override;
+
+  [[nodiscard]] bool supportsHiddenNetworks() const noexcept override { return true; }
+  bool connectHiddenNetwork(const std::string& ssid, HiddenNetworkSecurity security, const std::string& psk) override;
 
   [[nodiscard]] bool supportsEnterprise() const noexcept override { return true; }
   bool activateEnterpriseAccessPoint(
@@ -96,6 +101,11 @@ private:
   bool addAndActivateAccessPoint(
       const AccessPointInfo& ap, const std::optional<std::string>& psk,
       const std::optional<network_enterprise::EnterpriseCredentials>& credentials = std::nullopt
+  );
+  // Sends AddAndActivateConnection2 (falling back to the older call) for already-built settings.
+  bool submitNewConnection(
+      const std::map<std::string, std::map<std::string, sdbus::Variant>>& settings, const std::string& devicePath,
+      const std::string& apPath, const std::string& ssid
   );
   void watchPendingAccessPointActivation(
       const std::string& ssid, const std::string& devicePath, const std::string& connectionPath,
