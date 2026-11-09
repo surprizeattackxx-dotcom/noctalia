@@ -223,8 +223,9 @@ std::unique_ptr<Flex> WeatherTab::create() {
           view.clearBorder();
         },
     });
-    scroll->setMinHeight(rowH * 9.0F);
-    scroll->setMaxHeight(rowH * 9.0F);
+    scroll->setMinHeight(rowH * 4.0F);
+    scroll->setFlexGrow(1.0F);
+    scroll->setReserveScrollbarGutter(true);
     detailsList = scroll->content();
     detailsList->setDirection(FlexDirection::Vertical);
     detailsList->setAlign(FlexAlign::Stretch);
@@ -570,8 +571,9 @@ void WeatherTab::doLayout(Renderer& renderer, float contentWidth, float bodyHeig
     m_currentCard->setMinHeight(Style::controlHeightLg * 3.1F * scale);
   }
   if (m_detailsCard != nullptr) {
+    // The card takes the height left under the current-conditions card; its list scrolls inside it.
     m_detailsCard->setMinHeight(0.0F);
-    m_detailsCard->setFlexGrow(0.0F);
+    m_detailsCard->setFlexGrow(2.0F);
   }
 
   if (m_currentGlyph != nullptr && m_currentCard != nullptr) {
