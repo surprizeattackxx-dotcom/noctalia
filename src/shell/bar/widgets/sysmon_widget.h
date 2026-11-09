@@ -20,6 +20,7 @@
 class Box;
 class ConfigService;
 class Glyph;
+class CountdownRingNode;
 class Graph;
 class Image;
 class Label;
@@ -45,7 +46,7 @@ enum class SysmonStat {
   NetRx,
   NetTx
 };
-enum class SysmonVisualization { Graph, Gauge, None };
+enum class SysmonVisualization { Graph, Gauge, Ring, None };
 
 class SysmonWidget : public Widget {
 public:
@@ -85,6 +86,9 @@ private:
   bool needsFrameTick() const override;
   bool syncLabelText(const std::string& raw);
   void syncGaugeProgress(double normalized);
+  void syncRingProgress(double normalized);
+  [[nodiscard]] float ringPadding() const;
+  void layoutRing(float x, float y, float width, float height);
   bool splitCoresActive() const;
   void syncCoreGauge();
   void rebuildCoreGauge(std::size_t coreCount);
@@ -154,6 +158,9 @@ private:
 
   // Gauge mode
   ProgressBar* m_gauge = nullptr;
+  // Ring visualization: a dim track and the value arc, both drawn around the glyph inside m_identityGroup.
+  CountdownRingNode* m_ringTrack = nullptr;
+  CountdownRingNode* m_ringFill = nullptr;
 
   // Per-core split gauges (show_cpu_cores). The row repopulates whenever the sampler's core
   // count changes, because an entry's position is not its core id.

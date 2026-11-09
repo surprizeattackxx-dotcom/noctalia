@@ -4,6 +4,7 @@
 #include "i18n/i18n.h"
 #include "render/scene/input_area.h"
 #include "render/scene/node.h"
+#include "shell/render/countdown_ring_node.h"
 #include "shell/visuals/graph.h"
 #include "system/format_units.h"
 #include "system/system_monitor_service.h"
@@ -278,6 +279,16 @@ void SysmonWidget::create() {
     auto identityGroup = ui::box({.fill = clearColorSpec()});
     m_identityGroup = static_cast<Box*>(identityGroup.get());
     if (iconNode != nullptr) {
+      if (m_visualization == SysmonVisualization::Ring) {
+        // Added first so they paint behind the glyph.
+        for (CountdownRingNode** slot : {&m_ringTrack, &m_ringFill}) {
+          auto ring = std::make_unique<CountdownRingNode>();
+          ring->setParticipatesInLayout(false);
+          ring->setHitTestVisible(false);
+          *slot = static_cast<CountdownRingNode*>(m_identityGroup->addChild(std::move(ring)));
+        }
+        m_ringTrack->setProgress(1.0F);
+      }
       m_identityGroup->addChild(std::move(iconNode));
     }
     if (customLabelNode != nullptr) {
@@ -370,6 +381,11 @@ void SysmonWidget::syncVisualPalette() {
     const ColorSpec base = widgetForegroundOr(colorSpecFromRole(ColorRole::OnSurface));
     m_gauge->setTrack(gaugeTrackColor(base));
   }
+  if (m_ringTrack != nullptr) {
+    m_ringTrack->setColor(
+        resolveColorSpec(gaugeTrackColor(widgetForegroundOr(colorSpecFromRole(ColorRole::OnSurface))))
+    );
+  }
   const ColorSpec coreBase = widgetForegroundOr(colorSpecFromRole(ColorRole::OnSurface));
   const ColorSpec coreTrack = gaugeTrackColor(coreBase);
   const std::size_t coreCount = std::min(m_coreGauges.size(), m_lastCoreUsage.size());
@@ -404,6 +420,9 @@ void SysmonWidget::syncValueColor() {
   }
   if (m_gauge != nullptr) {
     m_gauge->setFill(valueColor);
+  }
+  if (m_ringFill != nullptr) {
+    m_ringFill->setColor(valueColor);
   }
 }
 
@@ -454,13 +473,35 @@ void SysmonWidget::setIconPosition(float x, float y) {
   }
 }
 
+float SysmonWidget::ringPadding() const {
+  if (m_ringFill == nullptr) {
+    return 0.0F;
+  }
+  return std::round(Style::fontSizeBody * m_contentScale * 0.3F);
+}
+
+void SysmonWidget::layoutRing(float x, float y, float width, float height) {
+  if (m_ringTrack == nullptr || m_ringFill == nullptr) {
+    return;
+  }
+  const float side = std::max(width, height);
+  const float thickness = std::max(1.5F, std::round(Style::fontSizeBody * m_contentScale * 0.14F * 2.0F) * 0.5F);
+  for (CountdownRingNode* ring : {m_ringTrack, m_ringFill}) {
+    ring->setThickness(thickness);
+    ring->setFrameSize(side, side);
+    ring->setPosition(x + (width - side) * 0.5F, y + (height - side) * 0.5F);
+  }
+}
+
 LayoutSize SysmonWidget::layoutIdentityGroup(float gap) {
   if (m_identityGroup == nullptr) {
     return {};
   }
 
-  const float iconW = iconWidth();
-  const float iconH = iconHeight();
+  // Ring mode reserves room around the glyph for the arc.
+  const float ringPad = ringPadding();
+  const float iconW = iconWidth() + 2.0F * ringPad;
+  const float iconH = iconHeight() + 2.0F * ringPad;
   const float customLabelW = m_customLabel != nullptr ? m_customLabel->width() : 0.0F;
   const float customLabelH = m_customLabel != nullptr ? m_customLabel->height() : 0.0F;
   const bool hasIcon = m_glyph != nullptr || m_image != nullptr;
@@ -474,7 +515,8 @@ LayoutSize SysmonWidget::layoutIdentityGroup(float gap) {
     size.height = iconH + identityGap + customLabelH;
     const float iconY = iconFirst ? 0.0F : customLabelH + identityGap;
     const float customLabelY = iconFirst ? iconH + identityGap : 0.0F;
-    setIconPosition((size.width - iconW) * 0.5F, iconY);
+    setIconPosition((size.width - iconW) * 0.5F + ringPad, iconY + ringPad);
+    layoutRing((size.width - iconW) * 0.5F, iconY, iconW, iconH);
     if (m_customLabel != nullptr) {
       m_customLabel->setPosition((size.width - customLabelW) * 0.5F, customLabelY);
     }
@@ -483,7 +525,8 @@ LayoutSize SysmonWidget::layoutIdentityGroup(float gap) {
     size.height = std::max(iconH, customLabelH);
     const float iconX = iconFirst ? 0.0F : customLabelW + identityGap;
     const float customLabelX = iconFirst ? iconW + identityGap : 0.0F;
-    setIconPosition(iconX, (size.height - iconH) * 0.5F);
+    setIconPosition(iconX + ringPad, (size.height - iconH) * 0.5F + ringPad);
+    layoutRing(iconX, (size.height - iconH) * 0.5F, iconW, iconH);
     if (m_customLabel != nullptr) {
       m_customLabel->setPosition(customLabelX, (size.height - customLabelH) * 0.5F);
     }
@@ -604,6 +647,14 @@ void SysmonWidget::syncGaugeProgress(double normalized) {
   const float fillAxis = m_isVerticalBar ? m_gauge->width() : m_gauge->height();
   const float progress = (fillAxis > 0.0F && normalized * fillAxis < 1.0F) ? 0.0F : static_cast<float>(normalized);
   m_gauge->setProgress(progress);
+  requestRedraw();
+}
+
+void SysmonWidget::syncRingProgress(double normalized) {
+  if (m_ringFill == nullptr) {
+    return;
+  }
+  m_ringFill->setProgress(static_cast<float>(std::clamp(normalized, 0.0, 1.0)));
   requestRedraw();
 }
 
@@ -867,6 +918,8 @@ void SysmonWidget::doUpdate(Renderer& renderer) {
       return;
     }
     syncGaugeProgress(currentNormalized());
+  } else if (m_visualization == SysmonVisualization::Ring) {
+    syncRingProgress(currentNormalized());
   } else if (m_visualization == SysmonVisualization::Graph) {
     if (m_monitor != nullptr && m_monitor->isRunning()) {
       updateGraph(renderer);
