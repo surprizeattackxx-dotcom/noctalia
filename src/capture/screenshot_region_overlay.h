@@ -9,6 +9,9 @@
 #include <vector>
 
 class RenderContext;
+class Flex;
+class Label;
+class ScreenshotServiceTestAccess;
 class WaylandConnection;
 struct KeyboardEvent;
 struct PointerEvent;
@@ -58,6 +61,8 @@ namespace capture {
     void onModifiersChanged();
 
   private:
+    friend class ::ScreenshotServiceTestAccess;
+
     struct Instance;
 
     DragMode m_dragMode = DragMode::None;
@@ -75,6 +80,7 @@ namespace capture {
     void prepareFrame(Instance& instance, bool needsUpdate, bool needsLayout);
     void abortWithError(const std::string& message);
     void updateSelectionVisuals();
+    std::unique_ptr<Flex> buildSelectionHint(Label*& hintOut);
     // Stores the shape on every instance and pushes it to the compositor right away.
     void applyCursorShape(std::uint32_t shape);
     bool modifierMode() const;

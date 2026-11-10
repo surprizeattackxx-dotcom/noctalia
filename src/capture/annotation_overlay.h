@@ -19,6 +19,7 @@ class Flex;
 class Renderer;
 class RenderContext;
 class WaylandConnection;
+class ScreenshotServiceTestAccess;
 struct KeyboardEvent;
 struct PointerEvent;
 struct wl_output;
@@ -63,7 +64,8 @@ namespace capture {
 
   class AnnotationOverlay {
   public:
-    using ExportCallback = std::function<void(ScreencopyImage image, AnnotationExport action)>;
+    // True means output was delivered; failed exports must leave the editing session intact.
+    using ExportCallback = std::function<bool(ScreencopyImage image, AnnotationExport action)>;
     using FreezeCallback = std::function<void()>;
     using CaptureRegionCallback = std::function<void()>;
     using CaptureWindowCallback = std::function<void()>;
@@ -118,6 +120,8 @@ namespace capture {
     bool onKeyboardEvent(const KeyboardEvent& event);
 
   private:
+    friend class ::ScreenshotServiceTestAccess;
+
     struct Instance;
 
     void ensureSurfaces();
@@ -190,6 +194,7 @@ namespace capture {
     void undo();
     void redo();
     void requestExport(AnnotationExport action);
+    void dispatchExport(ScreencopyImage image, AnnotationExport action);
     void requestFreeze();
     void requestCaptureRegion();
     void requestCaptureWindow();
