@@ -20,10 +20,12 @@ class ClipboardService;
 class CompositorPlatform;
 class ConfigService;
 class IpcService;
+class KwinWindowCapture;
 class NotificationManager;
 class RenderContext;
 class WaylandConnection;
 class SoundPlayer;
+class SessionBus;
 struct KeyboardEvent;
 struct PointerEvent;
 struct wl_output;
@@ -66,6 +68,7 @@ public:
   ~ScreenshotService();
 
   bool available() const noexcept;
+  void setSessionBus(SessionBus* bus);
 
   void captureFullscreen(const OutputOptions& options, wl_output* output = nullptr);
   void captureFullscreenInteractive(RenderContext& renderContext, const OutputOptions& options);
@@ -94,6 +97,8 @@ public:
   void setSoundPlayer(SoundPlayer* soundPlayer);
 
 private:
+  friend class ScreenshotServiceTestAccess;
+
   struct PendingCapture {
     wl_output* output = nullptr;
     std::optional<LogicalRect> region;
@@ -148,6 +153,9 @@ private:
       int pathSuffix = 0
   );
   void captureWindow(ext_foreign_toplevel_handle_v1* handle, const OutputOptions& options);
+  void captureKwinWindow(const std::string& windowId, const OutputOptions& options);
+  bool windowCaptureAvailable() const noexcept;
+  bool windowCaptureBusy() const noexcept;
   void ensureRegionOverlay();
   void startRegionOverlay(RenderContext& renderContext);
   void startFullscreenOverlay(RenderContext& renderContext);
@@ -164,7 +172,9 @@ private:
   );
   capture::AnnotationToolState loadAnnotationToolState() const;
   void persistAnnotationToolState(std::string_view key, std::string_view value);
-  void deliverFrozenRegion(LogicalRect region, wl_output* output, const OutputOptions& options);
+  void deliverFrozenRegion(
+      LogicalRect region, wl_output* output, const OutputOptions& options, const std::string& labelBase = "region"
+  );
   void deliverFrozenGlobalRegion(LogicalRect globalRegion, const OutputOptions& options);
   void captureGlobalRegion(LogicalRect globalRegion, const OutputOptions& options);
   void completeFullscreenSelection(wl_output* output, const OutputOptions& options);
@@ -220,6 +230,7 @@ private:
   ClipboardService* m_clipboard = nullptr;
   ScreenshotCapture m_capture;
   ToplevelThumbnailCapture m_toplevelCapture;
+  std::unique_ptr<KwinWindowCapture> m_kwinWindowCapture;
   std::unique_ptr<capture::ScreenshotRegionOverlay> m_regionOverlay;
   std::vector<PendingCapture> m_captureQueue;
   std::unique_ptr<AllOutputsBatch> m_allOutputsBatch;
@@ -230,6 +241,7 @@ private:
   std::vector<capture::FrozenScreenshot> m_frozenScreenshots;
   std::unique_ptr<capture::AnnotationOverlay> m_annotationOverlay;
   ext_foreign_toplevel_handle_v1* m_annotationCaptureTarget = nullptr;
+  std::string m_annotationKwinWindowId;
   std::string m_annotationCaptureError;
   std::vector<FreezeRequest> m_pendingFreezeCaptures;
   std::optional<PendingDelivery> m_pendingDelivery;

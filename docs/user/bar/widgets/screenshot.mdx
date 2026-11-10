@@ -5,7 +5,7 @@ sidebar:
   order: 20
 ---
 
-Captures the screen through the compositor's `wlr-screencopy` protocol (Niri, Hyprland, Sway, and other compositors that expose it). The widget is omitted from the bar when screencopy is unavailable.
+Captures the screen through the compositor's `wlr-screencopy` protocol (Niri, Hyprland, Sway, and other compositors that expose it), or KWin's `org.kde.KWin.ScreenShot2` interface on KDE Plasma. The widget is omitted when neither native capture backend is available.
 
 | Setting                 | Type   | Default        | Description                                                                         |
 | ----------------------- | ------ | -------------- | ----------------------------------------------------------------------------------- |
@@ -45,7 +45,9 @@ noctalia msg screenshot-fullscreen all
 noctalia msg screenshot-window
 ```
 
-These commands use the global `[shell.screenshot]` output policy unless [per-call options](/noctalia/ipc/media-and-ui/#per-call-options) override it; `screenshot-window` needs the compositor's ext image capture protocols instead of `wlr-screencopy`. The canonical command list is also under [Keybinds & IPC → Media & UI → Screenshots](/noctalia/ipc/media-and-ui/#screenshots).
+These commands use the global `[shell.screenshot]` output policy unless [per-call options](/noctalia/ipc/media-and-ui/#per-call-options) override it; `screenshot-window` uses KWin's native window capture on Plasma and the compositor's ext image capture protocols elsewhere. The canonical command list is also under [Keybinds & IPC → Media & UI → Screenshots](/noctalia/ipc/media-and-ui/#screenshots).
+
+On KDE, region capture, the display picker, frozen captures, and the annotation editor use the same Noctalia interfaces and output settings as on other compositors. Named displays are captured at native resolution; mixed-scale crops are mapped from logical coordinates to those pixels. The cursor can be included at capture time with `show_cursor`, but KWin does not provide a separate cursor layer, so the editor cannot toggle it afterwards. If KWin refuses capture authorization, the screenshot IPC commands retain Spectacle as a fallback on subsequent attempts; Spectacle uses its own UI and output settings. This backend does not change screen recording or lock-screen desktop capture.
 
 | `screenshot-fullscreen` argument | Behavior                                                                                             |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------- |

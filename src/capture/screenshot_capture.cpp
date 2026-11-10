@@ -1,5 +1,6 @@
 #include "capture/screenshot_capture.h"
 
+#include "capture/kwin_window_capture.h"
 #include "capture/screencopy_util.h"
 #include "wayland/wayland_connection.h"
 
@@ -12,7 +13,17 @@ ScreenshotCapture::ScreenshotCapture(WaylandConnection& wayland)
 
 ScreenshotCapture::~ScreenshotCapture() { cancelInFlight(); }
 
-bool ScreenshotCapture::available() const noexcept { return m_backgroundCapture.available(); }
+bool ScreenshotCapture::available() const noexcept {
+  return m_backgroundCapture.available() || (m_kwinCapture != nullptr && m_kwinCapture->available());
+}
+
+void ScreenshotCapture::setKwinSessionBus(SessionBus* bus) {
+  cancelInFlight();
+  m_kwinCapture.reset();
+  if (bus != nullptr) {
+    m_kwinCapture = std::make_unique<KwinWindowCapture>(*bus);
+  }
+}
 
 void ScreenshotCapture::capture(
     wl_output* output, std::optional<LogicalRect> region, bool showCursor, bool retainCursor,
@@ -31,7 +42,7 @@ void ScreenshotCapture::capture(
   m_cursor.reset();
   m_cursorStatus = capture::CursorToggleStatus::NotCaptured;
   m_onComplete = std::move(onComplete);
-  if (retainCursor && m_cursorCapture.available() && output != nullptr) {
+  if (retainCursor && m_cursorCapture.available() && m_backgroundCapture.available() && output != nullptr) {
     m_cursorCapture.capture(
         output, [this](std::optional<capture::CapturedCursor> cursor, const std::string& /*error*/) {
           m_cursor = std::move(cursor);
@@ -46,6 +57,10 @@ void ScreenshotCapture::capture(
 }
 
 void ScreenshotCapture::captureBackground() {
+  if (!m_backgroundCapture.available() && m_kwinCapture != nullptr && m_kwinCapture->available()) {
+    captureKwinBackground();
+    return;
+  }
   m_timeout.start(std::chrono::seconds(1), [this] {
     m_backgroundCapture.cancelInFlight();
     finish(std::nullopt, "screencopy frame timed out");
@@ -57,10 +72,50 @@ void ScreenshotCapture::captureBackground() {
   );
 }
 
+void ScreenshotCapture::captureKwinBackground() {
+  const auto* output = m_wayland.findOutputByWl(m_output);
+  if (output == nullptr || output->connectorName.empty() || !output->hasUsableGeometry()) {
+    finish(std::nullopt, "No usable output for KWin capture");
+    return;
+  }
+  m_kwinCapture->captureScreen(
+      output->connectorName, m_showCursor, [this](std::optional<ScreencopyImage> image, std::string error) {
+        std::optional<capture::ScreenshotImage> result;
+        const auto* currentOutput = m_wayland.findOutputByWl(m_output);
+        if (image && currentOutput != nullptr) {
+          // ScreenShot2 already returns display-oriented pixels at native resolution.
+          result = capture::ScreenshotImage{
+              .image = std::move(*image),
+              .cursorVisible = m_showCursor,
+              .cursorStatus = capture::CursorToggleStatus::NotCaptured,
+          };
+          if (m_region) {
+            result = capture::cropScreenshotImage(
+                *result, currentOutput->effectiveLogicalWidth(), currentOutput->effectiveLogicalHeight(), *m_region
+            );
+            if (!result) {
+              error = "Failed to crop KWin screenshot";
+            }
+          }
+        } else if (image) {
+          error = "Output disconnected during KWin capture";
+        }
+        m_busy = false;
+        auto callback = std::exchange(m_onComplete, {});
+        if (callback) {
+          callback(std::move(result), std::move(error));
+        }
+      }
+  );
+}
+
 void ScreenshotCapture::cancelInFlight() {
   m_timeout.stop();
   m_cursorCapture.cancelInFlight();
   m_backgroundCapture.cancelInFlight();
+  if (m_kwinCapture != nullptr) {
+    m_kwinCapture->cancelInFlight();
+  }
   m_cursor.reset();
   m_busy = false;
   m_onComplete = {};

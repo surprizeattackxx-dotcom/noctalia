@@ -100,7 +100,9 @@ int main() {
     TEST_CHECK(visible->actionEditorVisibility == IpcService::ActionEditorVisibility::Shown);
     TEST_CHECK(
         visible->description
-        == "Toggle a panel by id, optionally with context (e.g. launcher /emo, control-center audio)"
+        // The CLI schema adds the monitor selector (output=DP-1); the older string lacked it.
+        == "Toggle a panel by id, optionally on a monitor (output=DP-1) and with context (e.g. launcher /emo, "
+           "control-center audio)"
     );
 
     const auto status = std::ranges::find(infos, "status", &IpcService::HandlerInfo::command);

@@ -1,5 +1,6 @@
 #include "capture/screenshot_service.h"
 
+#include "capture/kwin_window_capture.h"
 #include "capture/screenshot_region_overlay.h"
 #include "cli/help.h"
 #include "cli/parse.h"
@@ -788,7 +789,31 @@ ScreenshotService::ScreenshotService(
     : m_wayland(wayland), m_platform(platform), m_notifications(notifications), m_configService(configService),
       m_clipboard(clipboard), m_capture(wayland), m_toplevelCapture(wayland) {}
 
-ScreenshotService::~ScreenshotService() = default;
+ScreenshotService::~ScreenshotService() {
+  m_capture.cancelInFlight();
+  if (m_kwinWindowCapture != nullptr) {
+    m_kwinWindowCapture->cancelInFlight();
+  }
+}
+
+void ScreenshotService::setSessionBus(SessionBus* bus) {
+  if (!compositors::isKde()) {
+    return;
+  }
+  m_capture.setKwinSessionBus(bus);
+  m_kwinWindowCapture.reset();
+  if (bus != nullptr) {
+    m_kwinWindowCapture = std::make_unique<KwinWindowCapture>(*bus);
+  }
+}
+
+bool ScreenshotService::windowCaptureAvailable() const noexcept {
+  return m_toplevelCapture.available() || (m_kwinWindowCapture != nullptr && m_kwinWindowCapture->available());
+}
+
+bool ScreenshotService::windowCaptureBusy() const noexcept {
+  return m_toplevelCapture.busy() || (m_kwinWindowCapture != nullptr && m_kwinWindowCapture->busy());
+}
 
 void ScreenshotService::rememberRegion(const LogicalRect& region) {
   if (region.width < 2 || region.height < 2) {
@@ -897,7 +922,7 @@ ScreenshotService::OutputOptions ScreenshotService::outputOptionsFromConfig(cons
 
 namespace {
 
-  // KWin has no screencopy, so on KDE hand the capture to Spectacle (its own region/window/screen UI).
+  // Escape hatch when native capture is unavailable (including a KWin authorization refusal).
   std::string kdeSpectacleFallback(const char* flag) {
     if (!compositors::isKde() || !process::commandExists("spectacle")) {
       return {};
@@ -1017,7 +1042,7 @@ void ScreenshotService::registerIpc(IpcService& ipc, const ConfigService& config
     if (!request) {
       return request.error();
     }
-    if (!m_toplevelCapture.available()) {
+    if (!windowCaptureAvailable()) {
       if (auto fallback = kdeSpectacleFallback("-a"); !fallback.empty()) {
         return fallback;
       }
@@ -1026,12 +1051,20 @@ void ScreenshotService::registerIpc(IpcService& ipc, const ConfigService& config
     if (overlayBusy()) {
       return "error: a screenshot overlay is already active\n";
     }
-    if (m_toplevelCapture.busy()) {
+    if (windowCaptureBusy()) {
       return "error: a window capture is already in progress\n";
     }
     const auto& options = request->options;
     if (!options.annotate && !hasAnyOutput(options)) {
       return "error: no screenshot output enabled\n";
+    }
+    if (m_kwinWindowCapture != nullptr && m_kwinWindowCapture->available()) {
+      rememberAnnotationCaptureTarget();
+      if (m_annotationKwinWindowId.empty()) {
+        return "error: " + m_annotationCaptureError + "\n";
+      }
+      captureKwinWindow(m_annotationKwinWindowId, options);
+      return "ok\n";
     }
     const auto target = resolveFocusedCaptureTarget();
     if (!target.has_value()) {
@@ -1117,7 +1150,18 @@ std::expected<ext_foreign_toplevel_handle_v1*, std::string> ScreenshotService::r
 
 void ScreenshotService::rememberAnnotationCaptureTarget() {
   m_annotationCaptureTarget = nullptr;
+  m_annotationKwinWindowId.clear();
   m_annotationCaptureError.clear();
+  if (m_kwinWindowCapture != nullptr && m_kwinWindowCapture->available()) {
+    // Snapshot KDE's UUID before the picker/editor takes focus. KDE does not provide ext handles.
+    const auto focused = m_platform.activeToplevel();
+    if (focused.has_value() && !focused->identifier.empty()) {
+      m_annotationKwinWindowId = focused->identifier;
+    } else {
+      m_annotationCaptureError = "no focused window reported by KWin";
+    }
+    return;
+  }
   if (const auto target = resolveFocusedCaptureTarget(); target.has_value()) {
     m_annotationCaptureTarget = *target;
   } else {
@@ -1159,6 +1203,28 @@ void ScreenshotService::captureWindow(ext_foreign_toplevel_handle_v1* handle, co
   );
 }
 
+void ScreenshotService::captureKwinWindow(const std::string& windowId, const OutputOptions& options) {
+  const std::optional<std::filesystem::path> destPath =
+      needsScreenshotPath(options) ? std::optional(makeScreenshotPath(options, "window")) : std::nullopt;
+  m_kwinWindowCapture->captureWindow(
+      windowId, options.showCursor, [this, options, destPath](std::optional<ScreencopyImage> image, std::string error) {
+        if (!error.empty() || !image.has_value()) {
+          notifyError(error.empty() ? "KWin window capture failed" : error);
+          return;
+        }
+        playCaptureSound();
+        deliverCaptureResult(
+            capture::ScreenshotImage{
+                .image = std::move(*image),
+                .cursorVisible = options.showCursor,
+                .cursorStatus = capture::CursorToggleStatus::NotCaptured,
+            },
+            options, destPath
+        );
+      }
+  );
+}
+
 wl_output* ScreenshotService::preferredCaptureOutput() const {
   if (wl_output* output = m_platform.preferredInteractiveOutput(); output != nullptr) {
     return output;
@@ -1172,7 +1238,7 @@ void ScreenshotService::captureFullscreen(const OutputOptions& options, wl_outpu
     notifyError("Screen capture is not available on this compositor");
     return;
   }
-  if (!hasAnyOutput(options)) {
+  if (!options.annotate && !hasAnyOutput(options)) {
     notifyError("No screenshot output enabled");
     return;
   }
@@ -1197,7 +1263,7 @@ void ScreenshotService::captureFullscreenInteractive(RenderContext& renderContex
     notifyError("Screen capture is not available on this compositor");
     return;
   }
-  if (!hasAnyOutput(options)) {
+  if (!options.annotate && !hasAnyOutput(options)) {
     notifyError("No screenshot output enabled");
     return;
   }
@@ -1250,7 +1316,7 @@ void ScreenshotService::beginFullscreenCapture(RenderContext& renderContext, con
     notifyError("Screen capture is not available on this compositor");
     return;
   }
-  if (!hasAnyOutput(options)) {
+  if (!options.annotate && !hasAnyOutput(options)) {
     notifyError("No screenshot output enabled");
     return;
   }
@@ -1593,7 +1659,7 @@ void ScreenshotService::ensureAnnotationOverlay() {
     persistAnnotationToolState(key, value);
   });
   m_annotationOverlay->setFailureCallback([this](const std::string& message) {
-    m_pendingDelivery.reset();
+    // Export failures are recoverable; actual teardown clears delivery in the closed callback.
     notifyError(message);
   });
   m_annotationOverlay->setClosedCallback([this] { m_pendingDelivery.reset(); });
@@ -1636,16 +1702,28 @@ void ScreenshotService::ensureAnnotationOverlay() {
     if (m_annotationOverlay == nullptr || !m_annotationOverlay->isActive()) {
       return;
     }
-    if (!m_toplevelCapture.available()) {
+    if (!windowCaptureAvailable()) {
       notifyError("Window capture is not available on this compositor");
       return;
     }
-    if (m_toplevelCapture.busy()) {
+    if (windowCaptureBusy()) {
       notifyError("A window capture is already in progress");
       return;
     }
     OutputOptions options = m_pendingDelivery.has_value() ? m_pendingDelivery->options : m_regionOutputOptions;
     options.annotate = true;
+    if (m_kwinWindowCapture != nullptr && m_kwinWindowCapture->available()) {
+      if (m_annotationKwinWindowId.empty()) {
+        notifyError(
+            m_annotationCaptureError.empty() ? "No window was focused when the editor opened" : m_annotationCaptureError
+        );
+        return;
+      }
+      const std::string target = m_annotationKwinWindowId;
+      m_annotationOverlay->cancel();
+      captureKwinWindow(target, options);
+      return;
+    }
     ext_foreign_toplevel_handle_v1* target = liveAnnotationCaptureTarget();
     if (target == nullptr) {
       notifyError(
@@ -1657,18 +1735,20 @@ void ScreenshotService::ensureAnnotationOverlay() {
     m_annotationOverlay->cancel();
     captureWindow(target, options);
   });
-  m_annotationOverlay->setExportCallback([this](ScreencopyImage image, capture::AnnotationExport action) {
+  m_annotationOverlay->setExportCallback([this](ScreencopyImage image, capture::AnnotationExport action) -> bool {
     if (action == capture::AnnotationExport::Done) {
       if (!m_pendingDelivery.has_value()) {
-        return;
+        return false;
       }
       OutputOptions options = m_pendingDelivery->options;
       options.annotate = false;
       applyEditorBackdrop(options);
       const auto destPath = m_pendingDelivery->destPath;
-      m_pendingDelivery.reset();
-      finishDelivery(std::move(image), options, destPath);
-      return;
+      const bool delivered = finishDelivery(std::move(image), options, destPath);
+      if (delivered) {
+        m_pendingDelivery.reset();
+      }
+      return delivered;
     }
 
     OutputOptions options = m_pendingDelivery.has_value() ? m_pendingDelivery->options : m_regionOutputOptions;
@@ -1685,6 +1765,7 @@ void ScreenshotService::ensureAnnotationOverlay() {
             || (action == capture::AnnotationExport::Save && options.closeOnSave))) {
       DeferredCall::callLater([this] { m_annotationOverlay->cancel(); });
     }
+    return delivered;
   });
 }
 
@@ -1933,7 +2014,9 @@ void ScreenshotService::finishGlobalRegionBatch() {
 
 void ScreenshotService::cancelGlobalRegionBatch() { m_globalRegionBatch.reset(); }
 
-void ScreenshotService::deliverFrozenRegion(LogicalRect region, wl_output* output, const OutputOptions& options) {
+void ScreenshotService::deliverFrozenRegion(
+    LogicalRect region, wl_output* output, const OutputOptions& options, const std::string& labelBase
+) {
   auto* frozen = findFrozenScreenshot(m_frozenScreenshots, output);
   const auto* out = findOutput(m_wayland, output);
   if (frozen == nullptr || out == nullptr) {
@@ -1950,7 +2033,7 @@ void ScreenshotService::deliverFrozenRegion(LogicalRect region, wl_output* outpu
   }
 
   const std::optional<std::filesystem::path> destPath =
-      needsScreenshotPath(options) ? std::optional(makeScreenshotPath(options, "region")) : std::nullopt;
+      needsScreenshotPath(options) ? std::optional(makeScreenshotPath(options, labelBase)) : std::nullopt;
   deliverCaptureResult(std::move(*cropped), options, destPath);
 }
 
@@ -1973,7 +2056,7 @@ void ScreenshotService::completeFullscreenSelection(wl_output* output, const Out
             .width = out->logicalWidth,
             .height = out->logicalHeight,
         },
-        output, options
+        output, options, "screenshot"
     );
     return;
   }
