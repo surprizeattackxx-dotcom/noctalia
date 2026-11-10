@@ -814,6 +814,7 @@ void Application::initNotificationAndOsd() {
       m_wayland, &m_renderContext, m_compositorPlatform, &m_configService, &m_asyncTextureCache
   );
   m_windowSwitcher.setSessionBus(m_bus.get());
+  m_screenshotService.setSessionBus(m_bus.get());
   // Quiet hours: the window edges only need minute accuracy, and a reload re-evaluates at once.
   m_quietHoursTimer.startRepeating(std::chrono::seconds(20), [this] { syncQuietHours(); });
   m_configService.addReloadCallback([this] { syncQuietHours(); });

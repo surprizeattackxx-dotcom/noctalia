@@ -836,8 +836,7 @@ namespace capture {
       inst.sceneRoot->addChild(std::move(pickerBar));
       pickerBarPtr->layout(renderer);
       pickerBarPtr->setPosition((w - pickerBarPtr->width()) * 0.5F, Style::spaceMd);
-    } else if (m_confirmRegion) {
-      auto hintBar = buildConfirmHintBar(inst.confirmHintLabel);
+    } else if (auto hintBar = buildSelectionHint(inst.confirmHintLabel)) {
       inst.confirmHint = hintBar.get();
       inst.sceneRoot->addChild(std::move(hintBar));
     }
@@ -854,6 +853,15 @@ namespace capture {
     }
 
     updateSelectionVisuals();
+  }
+
+  std::unique_ptr<Flex> ScreenshotRegionOverlay::buildSelectionHint(Label*& hintOut) {
+    if (m_fullscreenPick) {
+      return nullptr;
+    }
+    // Remembered regions can await confirmation even when new drags auto-complete.
+    // Visibility still follows m_confirming and the user's show-region-hint preference.
+    return buildConfirmHintBar(hintOut);
   }
 
   bool ScreenshotRegionOverlay::onPointerEvent(const PointerEvent& event) {
