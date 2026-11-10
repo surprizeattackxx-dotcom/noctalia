@@ -42,7 +42,9 @@ Selecting a history entry can auto-send a paste key chord (`Ctrl+V` / `Ctrl+Shif
 
 ### Screenshots
 
-The screenshot bar widget and `screenshot-region` / `screenshot-fullscreen` IPC need `zwlr-screencopy-unstable-v1`. That protocol is usually absent on KWin, so the widget is omitted and IPC reports capture unavailable. Use Plasma’s own screenshot tools instead.
+The KDE fork uses KWin's `org.kde.KWin.ScreenShot2` D-Bus interface for the native screenshot widget, region/display pickers, frozen captures, and annotation editor. `screenshot-fullscreen` accepts a connector name, `pick`, or `all`; `screenshot-window` captures the focused window by its KWin UUID. Existing save, clipboard, format, filename, and per-call output policies apply. See the [screenshot widget](/noctalia/bar/widgets/screenshot/).
+
+KWin may require Noctalia's installed desktop entry to declare `X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2`. A denied request reports an error and disables that capture backend; later screenshot IPC requests can fall back to Spectacle when installed, using Spectacle's own UI/settings. Cursor inclusion is selected before capture, not toggled in the editor afterwards. Screen recording and lock-screen capture are unchanged.
 
 ### Lock screen desktop capture
 
@@ -92,7 +94,7 @@ Session exit on Plasma falls through to a generic `loginctl` terminate path rath
 | Taskbar / dock windows           | ⚠️ Works via KWin script (degraded vs protocol)     |
 | Clipboard history                | ❌ Usually unavailable (no data-control)             |
 | Clipboard auto-paste             | ❌ Usually unavailable (no virtual-keyboard)         |
-| Screenshots (Noctalia)           | ❌ Usually unavailable (no screencopy)               |
+| Screenshots (Noctalia)           | ✅ Native KWin capture in the KDE fork              |
 | Lock desktop capture             | ❌ Unavailable without screencopy                    |
 | Night light (Noctalia)           | ❌ Unavailable (no gamma-control)                    |
 | Compositor blur                  | ⚠️ Weak stock; Better Blur can leave hide artifacts |

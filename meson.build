@@ -1467,6 +1467,49 @@ if build_tests
   )
   dbus_run_session = find_program('dbus-run-session', required: false)
   if dbus_run_session.found()
+    screenshot_settings_test_exe = executable('screenshot_settings_test',
+      sources: files('tests/screenshot_settings_test.cpp'),
+      dependencies: noctalia_core_dep,
+      override_options: ['b_ndebug=false'],
+    )
+    test('screenshot_settings_fullscreen', dbus_run_session,
+      args: ['--', 'env', 'NOCTALIA_TEST_PRIVATE_BUS=1', screenshot_settings_test_exe, 'fullscreen'],
+      timeout: 30,
+    )
+    test('screenshot_settings_filename', dbus_run_session,
+      args: ['--', 'env', 'NOCTALIA_TEST_PRIVATE_BUS=1', screenshot_settings_test_exe, 'filename'],
+      timeout: 30,
+    )
+    test('screenshot_settings_done', dbus_run_session,
+      args: ['--', 'env', 'NOCTALIA_TEST_PRIVATE_BUS=1', screenshot_settings_test_exe, 'done'],
+      timeout: 30,
+    )
+    test('screenshot_settings_hint', dbus_run_session,
+      args: ['--', 'env', 'NOCTALIA_TEST_PRIVATE_BUS=1', screenshot_settings_test_exe, 'hint'],
+      timeout: 30,
+    )
+    test('screenshot_settings_recoverable', dbus_run_session,
+      args: ['--', 'env', 'NOCTALIA_TEST_PRIVATE_BUS=1', screenshot_settings_test_exe, 'recoverable'],
+      timeout: 30,
+    )
+    kwin_capture_test_exe = executable('kwin_capture_test',
+      sources: files('tests/kwin_capture_test.cpp'),
+      dependencies: noctalia_core_dep,
+      override_options: ['b_ndebug=false'],
+    )
+    test('kwin_capture', dbus_run_session,
+      args: ['--', 'env', 'NOCTALIA_KWIN_TEST_ISOLATED=1', kwin_capture_test_exe],
+      timeout: 30,
+    )
+    screenshot_kwin_backend_test_exe = executable('screenshot_kwin_backend_test',
+      sources: files('tests/screenshot_kwin_backend_test.cpp'),
+      dependencies: noctalia_core_dep,
+      override_options: ['b_ndebug=false'],
+    )
+    test('screenshot_kwin_backend', dbus_run_session,
+      args: ['--', 'env', 'NOCTALIA_TEST_PRIVATE_BUS=1', screenshot_kwin_backend_test_exe],
+      timeout: 30,
+    )
     url_open_test_exe = executable('url_open_test',
       sources: files('tests/url_open_test.cpp'),
       dependencies: noctalia_core_dep,
