@@ -28,12 +28,20 @@ public:
   bool available() const noexcept { return m_available; }
   bool busy() const noexcept { return m_busy; }
   void capture(const std::string& windowId, int maxWidth, int maxHeight, CompletionCallback onComplete);
+  // Native-resolution output snapshot; connectorName is KWin's output connector (e.g. DP-1).
+  void captureScreen(const std::string& connectorName, bool showCursor, CompletionCallback onComplete);
+  // Native-resolution window snapshot, without thumbnail bounds.
+  void captureWindow(const std::string& windowId, bool showCursor, CompletionCallback onComplete);
   void cancelInFlight();
 
 private:
   struct Job;
 
   void joinWorker();
+  void startCapture(
+      const char* method, const std::string& target, bool showCursor, int maxWidth, int maxHeight,
+      CompletionCallback onComplete
+  );
 
   std::unique_ptr<sdbus::IProxy> m_proxy;
   std::shared_ptr<Job> m_job;

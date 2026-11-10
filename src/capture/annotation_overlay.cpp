@@ -2932,10 +2932,12 @@ namespace capture {
       }
       return;
     }
-    if (m_onExport) {
-      m_onExport(std::move(image), action);
-    }
-    if (action == AnnotationExport::Done) {
+    dispatchExport(std::move(image), action);
+  }
+
+  void AnnotationOverlay::dispatchExport(ScreencopyImage image, AnnotationExport action) {
+    const bool delivered = m_onExport && m_onExport(std::move(image), action);
+    if (delivered && action == AnnotationExport::Done) {
       closeOverlay();
     }
   }

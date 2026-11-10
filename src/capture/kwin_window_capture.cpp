@@ -109,7 +109,24 @@ void KwinWindowCapture::cancelInFlight() {
 void KwinWindowCapture::capture(
     const std::string& windowId, int maxWidth, int maxHeight, CompletionCallback onComplete
 ) {
-  if (m_busy || !m_available || windowId.empty()) {
+  startCapture("CaptureWindow", windowId, false, maxWidth, maxHeight, std::move(onComplete));
+}
+
+void KwinWindowCapture::captureScreen(
+    const std::string& connectorName, bool showCursor, CompletionCallback onComplete
+) {
+  startCapture("CaptureScreen", connectorName, showCursor, 0, 0, std::move(onComplete));
+}
+
+void KwinWindowCapture::captureWindow(const std::string& windowId, bool showCursor, CompletionCallback onComplete) {
+  startCapture("CaptureWindow", windowId, showCursor, 0, 0, std::move(onComplete));
+}
+
+void KwinWindowCapture::startCapture(
+    const char* method, const std::string& target, bool showCursor, int maxWidth, int maxHeight,
+    CompletionCallback onComplete
+) {
+  if (m_busy || !m_available || target.empty()) {
     if (onComplete) {
       onComplete(std::nullopt, m_busy ? "capture already in flight" : "KWin window capture unavailable");
     }
@@ -135,14 +152,14 @@ void KwinWindowCapture::capture(
 
   const std::map<std::string, sdbus::Variant> options{
       {"include-decoration", sdbus::Variant{true}},
-      {"include-cursor", sdbus::Variant{false}},
+      {"include-cursor", sdbus::Variant{showCursor}},
       {"include-shadow", sdbus::Variant{false}},
       {"native-resolution", sdbus::Variant{true}},
   };
   try {
-    m_proxy->callMethodAsync("CaptureWindow")
+    m_proxy->callMethodAsync(method)
         .onInterface(kInterface)
-        .withArguments(windowId, options, sdbus::UnixFd{fds[1]})
+        .withArguments(target, options, sdbus::UnixFd{fds[1]})
         .uponReplyInvoke([job, alive = m_alive, this](
                              std::optional<sdbus::Error> error, const std::map<std::string, sdbus::Variant>& result
                          ) {
@@ -271,13 +288,13 @@ void KwinWindowCapture::capture(
           }
           pixels = std::move(packed);
         }
-        const int maxWidth = job->maxWidth > 0 ? job->maxWidth : width;
-        const int maxHeight = job->maxHeight > 0 ? job->maxHeight : height;
-        const ImageExtent target = fitImageWithin(width, height, maxWidth, maxHeight);
+        const int boundWidth = job->maxWidth > 0 ? job->maxWidth : width;
+        const int boundHeight = job->maxHeight > 0 ? job->maxHeight : height;
+        const ImageExtent extent = fitImageWithin(width, height, boundWidth, boundHeight);
         ScreencopyImage out;
-        out.width = target.width;
-        out.height = target.height;
-        out.rgba = resizeToRgba(pixels.data(), width, height, *layout, target.width, target.height);
+        out.width = extent.width;
+        out.height = extent.height;
+        out.rgba = resizeToRgba(pixels.data(), width, height, *layout, extent.width, extent.height);
         if (out.rgba.empty()) {
           error = "failed to scale KWin capture";
         } else {
