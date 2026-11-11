@@ -760,6 +760,8 @@ settings::RegistryEnvironment SettingsWindow::buildRegistryEnvironment() const {
       env.umbrielOverviewTypeToLaunchSupported && m_platform != nullptr && m_platform->tracksOverviewState();
   env.ddcutilAvailable = (m_dependencies != nullptr && m_dependencies->hasDdcutil());
   env.systemdUserManaged = process::runningUnderSystemdUserManager();
+  env.kdeSystemSettingsAvailable =
+      compositors::isKde() && process::commandExists("systemsettings") && process::commandExists("kcmshell6");
   env.gammaControlAvailable =
       m_wayland != nullptr && m_wayland->extension<ShellGlobals>().gammaControlManager() != nullptr;
   env.greeterSyncAvailable =

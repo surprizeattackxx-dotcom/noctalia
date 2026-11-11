@@ -1526,6 +1526,7 @@
         "hot-corners": "Hot Corners",
         "idle": "Idle",
         "interface": "Interface",
+        "kde-system-settings": "KDE System Settings",
         "keybinds": "Keybinds",
         "keyboard-layout": "Keyboard Layout",
         "kinds": "Kinds",
@@ -3983,6 +3984,51 @@
         "battery-warning-threshold": {
           "description": "System battery percentage at or below which the shell sends a low-battery notification and battery widgets use their warning color (0 disables)",
           "label": "Battery Warning Threshold"
+        },
+        "kde-settings": {
+          "button": "Open",
+          "pages": {
+            "audio": {
+              "description": "KDE's audio devices, volumes and profiles",
+              "label": "KDE Sound"
+            },
+            "autostart": {
+              "description": "Apps and scripts that start with your session",
+              "label": "KDE Autostart"
+            },
+            "colors": {
+              "description": "Color scheme and accent for KDE and Qt apps",
+              "label": "KDE Colors"
+            },
+            "display": {
+              "description": "Resolution, refresh rate, scale, arrangement and HDR in KDE's display settings",
+              "label": "KDE Display"
+            },
+            "fonts": {
+              "description": "System fonts and font rendering",
+              "label": "KDE Fonts"
+            },
+            "icons": {
+              "description": "Icon theme for KDE and Qt apps",
+              "label": "KDE Icons"
+            },
+            "notifications": {
+              "description": "Per-app notification behavior in KDE (Noctalia still shows the popups)",
+              "label": "KDE Notifications"
+            },
+            "open": {
+              "description": "Open the full KDE System Settings window",
+              "label": "KDE System Settings"
+            },
+            "power": {
+              "description": "KDE's sleep, screen-off and power profile behavior",
+              "label": "KDE Power Management"
+            },
+            "shortcuts": {
+              "description": "KDE's global shortcuts and custom commands",
+              "label": "KDE Shortcuts"
+            }
+          }
         }
       },
       "templates": {

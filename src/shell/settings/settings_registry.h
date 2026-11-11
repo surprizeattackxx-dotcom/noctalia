@@ -321,6 +321,7 @@ namespace settings {
     bool systemdUserManaged = false;            // disable systemd app launching when the shell is not a user unit
     bool gammaControlAvailable = false;         // hide night-light entries when gamma control is unavailable
     bool greeterSyncAvailable = false;          // hide greeter appearance sync when greeter is not installed
+    bool kdeSystemSettingsAvailable = false;    // KDE only: show buttons that open KDE System Settings pages
     std::vector<SelectOption> availableOutputs; // monitor selectors available on this machine
     bool batteryAvailable = false;
     bool systemBatteryAvailable = false;
