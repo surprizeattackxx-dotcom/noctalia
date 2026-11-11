@@ -1,10 +1,13 @@
 #include "config/config_types.h"
 #include "config/schema/ranges.h"
+#include "core/log.h"
 #include "i18n/i18n.h"
 #include "shell/app_icon_colorization_settings.h"
 #include "shell/control_center/shortcut_registry.h"
+#include "shell/settings/kde_system_settings.h"
 #include "shell/settings/settings_registry.h"
 #include "shell/settings/settings_registry_common.h"
+#include "system/process.h"
 #include "system/sysmon_threshold_profile.h"
 
 #include <algorithm>
@@ -18,8 +21,40 @@
 
 namespace settings::registry {
 
+  namespace {
+
+    // Buttons that hand over to KDE's own settings pages. The window opens beside Noctalia's; closing
+    // it never touches the shell. A failed launch (binary vanished after startup) is logged, not fatal.
+    void addKdeSystemSettings(std::vector<SettingEntry>& entries) {
+      using i18n::tr;
+      const std::string buttonLabel = tr("settings.schema.system.kde-settings.button");
+      for (const auto& page : kdeSystemSettingsPages()) {
+        const std::string base = "settings.schema.system.kde-settings.pages." + std::string(page.id);
+        entries.push_back(makeEntry(
+            SettingsSection::System, "kde-system-settings", tr(base + ".label"), tr(base + ".description"), {},
+            ButtonSetting{
+                .label = buttonLabel,
+                .action =
+                    [command = kdeSystemSettingsCommand(page)] {
+                      if (!process::runAsync(command)) {
+                        Logger("settings").warn("could not launch {}", command.front());
+                      }
+                    },
+                .glyph = std::string(page.glyph),
+                .variant = ButtonVariant::Secondary,
+            },
+            "kde plasma system settings kcm " + std::string(page.id) + " " + std::string(page.module)
+        ));
+      }
+    }
+
+  } // namespace
+
   void addSystemSettings(std::vector<SettingEntry>& entries, const Config& cfg, const RegistryEnvironment& env) {
     using i18n::tr;
+    if (env.kdeSystemSettingsAvailable) {
+      addKdeSystemSettings(entries);
+    }
     if (env.batteryAvailable) {
       if (env.systemBatteryAvailable) {
         entries.push_back(makeEntry(
