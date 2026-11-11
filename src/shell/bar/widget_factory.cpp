@@ -324,6 +324,7 @@ std::unique_ptr<Widget> WidgetFactory::create(
                     .barPosition = context.barPosition,
                     .barName = context.barName,
                     .widgetName = context.name,
+                    .audio = f.m_audio,
                 }
             );
           }},
