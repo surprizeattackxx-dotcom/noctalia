@@ -220,7 +220,7 @@ TaskbarWidget::TaskbarWidget(
       m_windowTitleMaxWidth(static_cast<float>(m_configOptions.windowTitleMaxWidth)),
       m_taskbarMaxWidth(static_cast<float>(m_configOptions.taskbarMaxWidth)),
       m_barPosition(std::move(context.barPosition)), m_barName(std::move(context.barName)),
-      m_widgetName(std::move(context.widgetName)) {
+      m_widgetName(std::move(context.widgetName)), m_audio(context.audio) {
   syncWorkspaceGroupingCapability();
   buildDesktopIconIndex();
 }
@@ -3091,7 +3091,7 @@ void TaskbarWidget::schedulePreview(TaskRef ref, std::vector<TaskRef> members, I
         TooltipManager::instance().forceDestroy();
         if (!m_taskPreview) {
           try {
-            m_taskPreview = std::make_unique<TaskbarPreviewPopup>(m_platform, *renderContext, *bus);
+            m_taskPreview = std::make_unique<TaskbarPreviewPopup>(m_platform, *renderContext, *bus, m_audio);
           } catch (const std::exception&) {
             return;
           }

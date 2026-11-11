@@ -8,6 +8,7 @@
 #include "system/icon_resolver.h"
 #include "ui/popup_parent.h"
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -17,7 +18,9 @@ class PopupSurface;
 class RenderContext;
 class Node;
 class Image;
+class InputArea;
 class SessionBus;
+class PipeWireService;
 
 struct TaskbarPreviewEntry {
   ToplevelInfo window;
@@ -28,7 +31,9 @@ struct TaskbarPreviewEntry {
 // snapshots; all window actions resolve the current compositor identity again.
 class TaskbarPreviewPopup {
 public:
-  TaskbarPreviewPopup(CompositorPlatform& platform, RenderContext& renderer, SessionBus& bus);
+  TaskbarPreviewPopup(
+      CompositorPlatform& platform, RenderContext& renderer, SessionBus& bus, PipeWireService* audio = nullptr
+  );
   ~TaskbarPreviewPopup();
   bool available() const noexcept { return m_capture.available(); }
   bool isOpen() const noexcept { return m_surface != nullptr; }
@@ -45,11 +50,14 @@ public:
 private:
   void scheduleClose();
   void captureNext();
+  float cardHeight(std::size_t index) const;
+  void addVolumeRow(InputArea& card, const std::vector<std::uint32_t>& streams);
   void prepareFrame();
   void activate(std::string id, std::string appId);
 
   CompositorPlatform& m_platform;
   RenderContext& m_renderer;
+  PipeWireService* m_audio = nullptr;
   KwinWindowCapture m_capture;
   std::unique_ptr<PopupSurface> m_surface;
   std::unique_ptr<Node> m_root;
@@ -57,6 +65,8 @@ private:
   noctalia::taskbar::PreviewHover m_hover;
   Timer m_closeTimer;
   std::vector<TaskbarPreviewEntry> m_entries;
+  // Playback streams of each entry's application; empty when it is silent (no volume row).
+  std::vector<std::vector<std::uint32_t>> m_streams;
   std::vector<std::optional<ScreencopyImage>> m_pixels;
   std::vector<Image*> m_images;
   std::size_t m_nextCapture = 0;
