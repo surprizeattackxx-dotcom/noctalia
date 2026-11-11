@@ -1363,6 +1363,7 @@ if build_tests
     'scrollbar_geometry',
     'secret_store',
     'security_primitives',
+    'kde_system_settings',
     'settings_search',
     'state_store',
     'surface_blur_region',
@@ -1420,7 +1421,7 @@ if build_tests
         test_args = [meson.project_source_root() / 'assets']
       elif test_name == 'i18n_supported_languages'
         test_args = [meson.project_source_root() / 'assets' / 'translations']
-      elif test_name == 'settings_search'
+      elif test_name in ['settings_search', 'kde_system_settings']
         test_args = [meson.project_source_root() / 'assets']
       endif
       test(test_name, test_exe, args: test_args)
