@@ -2,14 +2,17 @@
 
 #include "core/deferred_call.h"
 #include "core/ui_phase.h"
+#include "pipewire/pipewire_service.h"
 #include "render/core/texture_manager.h"
 #include "render/render_context.h"
 #include "render/render_target.h"
 #include "render/scene/input_area.h"
 #include "ui/builders.h"
+#include "ui/controls/glyph.h"
 #include "ui/controls/image.h"
 #include "ui/controls/label.h"
 #include "ui/controls/scroll_view.h"
+#include "ui/controls/slider.h"
 #include "ui/style.h"
 #include "util/string_utils.h"
 #include "wayland/popup_surface.h"
@@ -21,8 +24,16 @@
 #include <cmath>
 #include <linux/input-event-codes.h>
 
-TaskbarPreviewPopup::TaskbarPreviewPopup(CompositorPlatform& platform, RenderContext& renderer, SessionBus& bus)
-    : m_platform(platform), m_renderer(renderer), m_capture(bus) {}
+namespace {
+  constexpr float kCardHeight = 182.0F;
+  constexpr float kVolumeRowHeight = 30.0F;
+  constexpr float kCardGap = 8.0F;
+} // namespace
+
+TaskbarPreviewPopup::TaskbarPreviewPopup(
+    CompositorPlatform& platform, RenderContext& renderer, SessionBus& bus, PipeWireService* audio
+)
+    : m_platform(platform), m_renderer(renderer), m_audio(audio), m_capture(bus) {}
 
 TaskbarPreviewPopup::~TaskbarPreviewPopup() {
   *m_alive = false;
@@ -58,6 +69,7 @@ void TaskbarPreviewPopup::close() {
   m_surface.reset();
   m_pixels.clear();
   m_entries.clear();
+  m_streams.clear();
   m_nextCapture = 0;
 }
 
@@ -76,8 +88,15 @@ void TaskbarPreviewPopup::open(
   const int outputWidth = output ? output->effectiveLogicalWidth() : 640;
   const int outputHeight = output ? output->effectiveLogicalHeight() : 480;
   m_cardWidth = static_cast<float>(std::clamp(outputWidth - 48, 80, 260));
-  m_viewHeight =
-      std::min(190.0F * static_cast<float>(m_entries.size()), static_cast<float>(std::max(100, outputHeight / 2)));
+  m_streams.assign(m_entries.size(), {});
+  float contentHeight = 0.0F;
+  for (std::size_t i = 0; i < m_entries.size(); ++i) {
+    if (m_audio != nullptr) {
+      m_streams[i] = noctalia::taskbar::matchAudioStreams(m_audio->state().programOutputs, m_entries[i].window.appId);
+    }
+    contentHeight += cardHeight(i) + kCardGap;
+  }
+  m_viewHeight = std::min(contentHeight, static_cast<float>(std::max(100, outputHeight / 2)));
   PopupSurfaceConfig config{
       .anchorX = anchor.x,
       .anchorY = anchor.y,
@@ -206,7 +225,8 @@ void TaskbarPreviewPopup::prepareFrame() {
     scroll->content()->setGap(8);
     for (const auto& entry : m_entries) {
       auto card = ui::inputArea({});
-      card->setFrameSize(m_cardWidth, 182);
+      const auto index = static_cast<std::size_t>(&entry - m_entries.data());
+      card->setFrameSize(m_cardWidth, cardHeight(index));
       const auto id = entry.window.identifier;
       const auto app = entry.window.appId;
       card->setOnClick([this, id, app](const InputArea::PointerData&) { activate(id, app); });
@@ -227,6 +247,9 @@ void TaskbarPreviewPopup::prepareFrame() {
       label->setPosition(8, 158);
       label->layout(renderer);
       card->addChild(std::move(label));
+      if (!m_streams[index].empty()) {
+        addVolumeRow(*card, m_streams[index]);
+      }
       scroll->content()->addChild(std::move(card));
     }
     scroll->layout(renderer);
@@ -249,6 +272,67 @@ void TaskbarPreviewPopup::prepareFrame() {
     m_pixels[i].reset();
   }
   m_root->layout(renderer);
+}
+
+float TaskbarPreviewPopup::cardHeight(std::size_t index) const {
+  return kCardHeight + (index < m_streams.size() && !m_streams[index].empty() ? kVolumeRowHeight : 0.0F);
+}
+
+// Per-application volume, like KDE's task manager: one slider drives every stream of the app.
+void TaskbarPreviewPopup::addVolumeRow(InputArea& card, const std::vector<std::uint32_t>& streams) {
+  float volume = 0.0F;
+  bool allMuted = true;
+  for (const auto& node : m_audio->state().programOutputs) {
+    if (std::ranges::find(streams, node.id) != streams.end()) {
+      volume = std::max(volume, node.volume);
+      allMuted = allMuted && node.muted;
+    }
+  }
+  auto* audio = m_audio;
+  auto muted = std::make_shared<bool>(allMuted);
+  auto icon = ui::glyph(
+      {.glyph = allMuted ? "volume-mute" : "volume-high",
+       .glyphSize = 16.0F,
+       .color = colorSpecFromRole(ColorRole::OnSurface)}
+  );
+  auto* iconPtr = icon.get();
+  auto muteArea = ui::inputArea({});
+  muteArea->setPosition(4, kCardHeight + 3);
+  muteArea->setFrameSize(24, 24);
+  icon->setPosition(4, 4);
+  muteArea->addChild(std::move(icon));
+  muteArea->setOnClick([audio, streams, muted, iconPtr](const InputArea::PointerData&) {
+    *muted = !*muted;
+    for (const auto id : streams) {
+      audio->setProgramOutputMuted(id, *muted);
+    }
+    iconPtr->setGlyph(*muted ? "volume-mute" : "volume-high");
+  });
+  card.addChild(std::move(muteArea));
+  auto slider = ui::slider({
+      .minValue = 0.0,
+      .maxValue = 1.0,
+      .step = 0.01,
+      .value = std::clamp(static_cast<double>(volume), 0.0, 1.0),
+      .controlHeight = 24.0F,
+      .wheelAdjustEnabled = false, // the wheel scrolls the preview list
+      .width = m_cardWidth - 44.0F,
+      .height = 24.0F,
+      .onValueChanged = [audio, streams, muted, iconPtr](double value) {
+        for (const auto id : streams) {
+          audio->setProgramOutputVolume(id, static_cast<float>(value));
+        }
+        if (*muted && value > 0.0) {
+          *muted = false;
+          for (const auto id : streams) {
+            audio->setProgramOutputMuted(id, false);
+          }
+          iconPtr->setGlyph("volume-high");
+        }
+      },
+  });
+  slider->setPosition(32, kCardHeight + 3);
+  card.addChild(std::move(slider));
 }
 
 void TaskbarPreviewPopup::activate(std::string id, std::string appId) {
