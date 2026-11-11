@@ -91,6 +91,7 @@ struct TaskbarWidgetContext {
   std::string barName;
   // Config key for [widget.<name>] overrides.
   std::string widgetName;
+  PipeWireService* audio = nullptr; // per-application volume in hover previews
 };
 
 class TaskbarWidget : public Widget {
@@ -335,6 +336,7 @@ private:
   std::unordered_map<std::uintptr_t, PendingWorkspaceTransition> m_pendingWorkspaceTransitions;
   std::unordered_map<std::string, std::size_t> m_groupedAppCycleCursor;
   std::unordered_map<std::string, std::string> m_appIconsByLower;
+  PipeWireService* m_audio = nullptr;
   std::unique_ptr<TaskbarPreviewPopup> m_taskPreview;
   Timer m_previewTimer;
   std::optional<TaskRef> m_previewTask;
