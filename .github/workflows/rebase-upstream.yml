@@ -30,7 +30,13 @@ jobs:
             echo "$latest" > .kde-base; git add .kde-base; git commit -qm "kde: base is now $short"
             git push origin "kde-rebase-$short"
           else
+            conflicts=$(git diff --name-only --diff-filter=U | sed 's/^/- /')
             git rebase --abort
-            gh issue create --title "kde patches do not apply to upstream $short" \
-              --body "Rebasing kde onto upstream main ($short) conflicted. Port the commits by hand."
+            msg="Rebasing kde (base $base) onto upstream main ($short) conflicted. Port the commits by hand. Conflicted files:"$'\n'"$conflicts"
+            # Always visible in the run itself; the issue is a bonus (issues can be disabled on a fork).
+            { echo "### kde patches do not apply to upstream $short"; echo "$msg"; } >> "$GITHUB_STEP_SUMMARY"
+            gh issue create --title "kde patches do not apply to upstream $short" --body "$msg" \
+              || echo "::warning::could not open an issue (issues disabled or no permission); see the job summary"
+            echo "::error::kde patches do not apply to upstream $short"
+            exit 1
           fi
